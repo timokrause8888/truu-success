@@ -282,6 +282,33 @@ const TRANSLATIONS = {
     disclaimer: 'Пример расчёта. Без гарантии дохода. План 04/2026.',
     contact: 'Стать truu hero',
   },
+  bar: {
+    /* Bayerisch — herzhaft, mit Schmäh */
+    title: 'truu success', subtitle: 'Geld-Ausrechner',
+    intro: 'Klick di durch, Verkauf für Verkauf, und schaug, wia Empfehlung, Wassa-Studie und da Vortrag dein Bankerl auffüllen.',
+    your_level: 'Dei Karriere-Stufn', market: 'Markt',
+    market_de: 'Deutschland & EU', market_ch: 'Schwiiz',
+    sale_n: 'Verkaaf {{n}}', sale_label: 'Verkaaf',
+    next: 'Nachsta Verkaaf →', prev: '← Zruck',
+    reset: 'Neistart', show_all: 'Olle 8 ozaagn',
+    you: 'Du', customer: 'Kund {{n}}', customer_short: 'K{{n}}',
+    earnings_title: 'Dei Geld', earnings_this_sale: 'Bei dem Verkaaf',
+    earnings_total: 'Bisher gsamt', earnings_breakdown: 'Aufgschlüsselt',
+    success_bonus: 'Empfehler-Provisn', station_bonus: 'truu Station Bonus',
+    consultant_reward: 'Consultant Reward', expert_reward: 'Expert Reward',
+    total: 'Summe',
+    boosters_title: 'Booster', booster_station: 'Station Bonus',
+    booster_power: 'Power Booster', booster_world: 'Welt Booster',
+    points: 'Punkt', qualified: 'Bist drin', not_qualified: 'no ned dabei',
+    tip_success: 'Empfehler-Provisn = dei Tarif minus den vom direktn Verkäufer (Differenzprovisn). Macherst as alloa: voll auszoit.',
+    tip_station: '55 € (CH 60 €) für den, der as Wassa zum Probiern austeilt hat.',
+    tip_consultant: '110 € pauschal fia de Wassa-Studie und Beratung.',
+    tip_expert: '110 € pauschal fia Vortrag, Abschluss und Eintrag.',
+    tip_power: 'Pauschal 400 € ab 16 Booster-Punkt/Monat ois Expert. Gibts an drittn Monat nach da Quali.',
+    tip_world: 'Anteilig aus n weltweitn Pool, ab 12 Punkt/Monat.',
+    disclaimer: 'Beispül-Rechnung. Koa Garantie. Plan 04/2026.',
+    contact: 'Werd a truu hero',
+  },
 }
 
 export const SUPPORTED_LOCALES = Object.keys(TRANSLATIONS)
@@ -291,6 +318,7 @@ export const LOCALE_LABELS = {
   es: '🇪🇸 Español', bg: '🇧🇬 Български', fr: '🇫🇷 Français',
   it: '🇮🇹 Italiano', nl: '🇳🇱 Nederlands', pt: '🇵🇹 Português',
   ru: '🇷🇺 Русский',
+  bar: '🥨 Bayerisch',
 }
 
 export function detectLocale() {

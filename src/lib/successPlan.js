@@ -67,19 +67,17 @@ export function successBonusFor(heroLevel, downlineLevel, market = 'de') {
  * Gibt eine Liste zurück, jeweils {recipient, kind, amount, note}.
  *
  * @param {Object} sale
- * @param {string} sale.directSellerId — Hero, der den Verkauf direkt
- *   gemacht hat (= dessen Empfehlung den Kunden zu uns brachte)
- * @param {string} sale.consultantId — Hero, der die Wasserstudie macht
- * @param {string} sale.expertId — Hero, der den Vortrag + Abschluss macht
- * @param {string} sale.stationId — Hero, der das Wasser ausgeteilt hat
- * @param {Array<{id: string, sponsorId: string|null, level: Object,
- *   licenseInTraining?: boolean}>} heroes — alle relevanten Heroes
+ * @param {Array} heroes
  * @param {'de'|'ch'} market
- * @returns {Array<{recipient: string, kind: string, amount: number, note?: string}>}
+ * @param {Object} [opts]
+ * @param {boolean} [opts.includeZeroLines=false] — wenn true, werden
+ *   auch Empfehler in der Sponsor-Kette emittiert, die 0 € bekommen
+ *   (= gleiche Stufe wie Downline). Nützlich für Visualisierung.
  */
-export function commissionLines(sale, heroes, market = 'de') {
+export function commissionLines(sale, heroes, market = 'de', opts = {}) {
   const byId = new Map(heroes.map(h => [h.id, h]))
   const lines = []
+  const includeZero = !!opts.includeZeroLines
 
   // ─── 1. Empfehler-Kette (Differenzprovision) ──────────────────
   // Vom direkten Verkäufer aufwärts: jeder bekommt die Differenz
@@ -92,16 +90,22 @@ export function commissionLines(sale, heroes, market = 'de') {
     if (!hero) break
     const bonus = market === 'ch' ? hero.level.chBonus : hero.level.deBonus
     const diff = Math.max(0, bonus - highestPaidBonus)
-    if (diff > 0) {
+    if (diff > 0 || includeZero) {
       lines.push({
         recipient: hero.id,
         kind: 'success',
         amount: diff,
-        note: highestPaidBonus === 0
-          ? `Empfehler-Provision (${hero.level.label})`
-          : `Differenz (${hero.level.label} − ${highestPaidBonus} €)`,
+        note: diff === 0
+          ? `Keine Differenz (${hero.level.label})`
+          : highestPaidBonus === 0
+            ? `Empfehler-Provision (${hero.level.label})`
+            : `Differenz (${hero.level.label} − ${highestPaidBonus} €)`,
       })
-      highestPaidBonus = bonus
+      if (diff > 0) highestPaidBonus = bonus
+    } else {
+      // Auch bei !includeZero den highestPaidBonus aktualisieren,
+      // damit weiter oben in der Kette die Differenz korrekt rollt
+      if (bonus > highestPaidBonus) highestPaidBonus = bonus
     }
     currentId = hero.sponsorId
   }

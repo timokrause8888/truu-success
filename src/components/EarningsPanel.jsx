@@ -1,10 +1,10 @@
-// EarningsPanel — Zeigt rechts neben dem Tree den Verdienst des Heroes:
-// pro aktiv gewähltem Verkauf eine Aufschlüsselung (Empfehler-Provision,
-// Station-Bonus, Consultant Reward, Expert Reward, Total) und darunter
-// die kumulative Summe über alle bisher angeklickten Verkäufe.
+// EarningsPanel — Verdienst des Heroes pro aktiv gewähltem Verkauf
+// + kumulative Summe. Verwendet pro Verkauf das tatsächliche Hero-
+// Level (steigt automatisch hoch bei Stufenwechsel).
 
 import { useMemo } from 'react'
 import { commissionLines, aggregateByHero } from '../lib/successPlan'
+import { buildHeroes } from '../lib/scenario'
 import { t } from '../lib/i18n'
 
 const KIND_KEY = {
@@ -13,7 +13,6 @@ const KIND_KEY = {
   consultant: 'consultant_reward',
   expert: 'expert_reward',
 }
-
 const KIND_TIP = {
   success: 'tip_success',
   station: 'tip_station',
@@ -22,7 +21,7 @@ const KIND_TIP = {
 }
 
 function fmt(n, locale, market) {
-  const loc = locale === 'de' || locale === 'ch' ? 'de-DE' : 'en-US'
+  const loc = locale === 'de' || locale === 'ch' || locale === 'bar' ? 'de-DE' : 'en-US'
   return new Intl.NumberFormat(loc, {
     style: 'currency',
     currency: market === 'ch' ? 'CHF' : 'EUR',
@@ -30,25 +29,27 @@ function fmt(n, locale, market) {
   }).format(n)
 }
 
-export default function EarningsPanel({ heroes, sales, activeSale, market, locale }) {
+export default function EarningsPanel({ heroLevelKey, sales, activeSale, market, locale }) {
   const showAll = activeSale > sales.length
 
-  // Provisionen für den aktiv-gewählten Verkauf (oder leer im All-Mode)
+  // Provisionen für aktuellen Verkauf
   const currentSaleAgg = useMemo(() => {
     if (showAll) return null
     const sale = sales.find(s => s.n === activeSale)
     if (!sale) return null
+    const heroes = buildHeroes(heroLevelKey, sale.n)
     const lines = commissionLines(sale, heroes, market)
     return aggregateByHero(lines).get('hero') || { success: 0, station: 0, consultant: 0, expert: 0, total: 0 }
-  }, [sales, activeSale, heroes, market, showAll])
+  }, [sales, activeSale, heroLevelKey, market, showAll])
 
-  // Kumulative Provisionen für den Hero über alle bis activeSale
-  // (oder alle, wenn All-Mode)
+  // Kumulativ — pro Sale eigenes Hero-Level
   const cumulative = useMemo(() => {
     const upto = showAll ? sales.length : activeSale
     const totals = { success: 0, station: 0, consultant: 0, expert: 0, total: 0 }
     for (let i = 0; i < upto && i < sales.length; i++) {
-      const lines = commissionLines(sales[i], heroes, market)
+      const sale = sales[i]
+      const heroes = buildHeroes(heroLevelKey, sale.n)
+      const lines = commissionLines(sale, heroes, market)
       const a = aggregateByHero(lines).get('hero')
       if (a) {
         totals.success += a.success
@@ -59,7 +60,7 @@ export default function EarningsPanel({ heroes, sales, activeSale, market, local
       }
     }
     return totals
-  }, [sales, activeSale, heroes, market, showAll])
+  }, [sales, activeSale, heroLevelKey, market, showAll])
 
   const sale = sales.find(s => s.n === activeSale)
 
@@ -67,7 +68,6 @@ export default function EarningsPanel({ heroes, sales, activeSale, market, local
     <div className="earnings-panel">
       <h2 className="panel-title">{t('earnings_title', locale)}</h2>
 
-      {/* Aktueller Verkauf */}
       {!showAll && sale && currentSaleAgg && (
         <div className="earnings-card current">
           <div className="card-head">
@@ -93,7 +93,6 @@ export default function EarningsPanel({ heroes, sales, activeSale, market, local
         </div>
       )}
 
-      {/* Kumulativ */}
       <div className="earnings-card cumulative">
         <div className="card-head">
           <span className="card-title-small">

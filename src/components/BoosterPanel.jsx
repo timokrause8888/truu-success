@@ -1,10 +1,6 @@
-// BoosterPanel — zeigt unter den Verdiensten die Booster:
-//   • truu Station Bonus (kumulativ)
-//   • Power Booster (pauschal 400 € ab 16 Punkten/Mon)
-//   • World Booster (Pool-Anteil, Schätzwert)
-//
-// Die Booster-Sektion zeigt explizit, ob der Hero bereits qualifiziert
-// ist — als Lern-Effekt fürs Verständnis der Schwellen.
+// BoosterPanel — Station, Power und World Booster mit Quali-Status.
+// Booster-Punkte werden monatsweise gerechnet (kein Sliding-Window
+// im Gegensatz zu den success Punkten).
 
 import { useMemo } from 'react'
 import {
@@ -15,7 +11,7 @@ import {
 import { t } from '../lib/i18n'
 
 function fmt(n, locale, market) {
-  const loc = locale === 'de' || locale === 'ch' ? 'de-DE' : 'en-US'
+  const loc = locale === 'de' || locale === 'ch' || locale === 'bar' ? 'de-DE' : 'en-US'
   return new Intl.NumberFormat(loc, {
     style: 'currency',
     currency: market === 'ch' ? 'CHF' : 'EUR',
@@ -23,8 +19,8 @@ function fmt(n, locale, market) {
   }).format(n)
 }
 
-export default function BoosterPanel({ heroes, sales, activeSale, market, locale }) {
-  void heroes
+export default function BoosterPanel({ heroLevelKey, sales, activeSale, market, locale }) {
+  void heroLevelKey   // gleiches Setup-Argument-Pattern wie EarningsPanel
   const showAll = activeSale > sales.length
   const upto = showAll ? sales.length : activeSale
   const slice = sales.slice(0, Math.max(0, upto))

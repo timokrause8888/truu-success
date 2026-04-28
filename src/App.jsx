@@ -1,21 +1,32 @@
-import React, { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { LEVELS } from './lib/successPlan'
-import { buildHeroes, buildSales, DEFAULT_HERO_LEVEL_KEY } from './lib/scenario'
+import { buildSales, DEFAULT_HERO_LEVEL_KEY, heroLevelAtSale } from './lib/scenario'
 import { t, detectLocale, SUPPORTED_LOCALES, LOCALE_LABELS } from './lib/i18n'
 import SalesTree from './components/SalesTree'
 import EarningsPanel from './components/EarningsPanel'
 import BoosterPanel from './components/BoosterPanel'
 import HeroesLogo from './components/HeroesLogo'
 
+// Vite-injected (siehe vite.config.js define-Block)
+/* eslint-disable no-undef */
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'local'
+const BUILD_TIME  = typeof __BUILD_TIME__  !== 'undefined' ? __BUILD_TIME__  : ''
+/* eslint-enable no-undef */
+
 export default function App() {
   const [locale, setLocale] = useState(() => detectLocale())
-  const [market, setMarket] = useState('de')                  // 'de' | 'ch'
+  const [market, setMarket] = useState('de')
   const [heroLevelKey, setHeroLevelKey] = useState(DEFAULT_HERO_LEVEL_KEY)
-  const [activeSale, setActiveSale] = useState(1)             // 1-basiert; 0 = noch nichts
+  const [activeSale, setActiveSale] = useState(1)
 
-  const heroes = useMemo(() => buildHeroes(heroLevelKey), [heroLevelKey])
-  const sales  = useMemo(() => buildSales(heroes, market),    [heroes, market])
+  const sales = buildSales()
   const totalSales = sales.length
+  // Hero-Level am aktuell gewählten Verkauf — kann während Click-Through
+  // automatisch hochsteigen (z.B. von navigator → commander bei Sale 7).
+  const heroLevelNow = heroLevelAtSale(heroLevelKey,
+    activeSale > totalSales ? totalSales : activeSale)
+  const startLevel = LEVELS.find(l => l.key === heroLevelKey) || LEVELS[0]
+  const levelChanged = heroLevelNow.key !== startLevel.key
 
   return (
     <div className="page">
@@ -23,25 +34,29 @@ export default function App() {
       <header className="hero">
         <div className="hero-inner">
           <div className="hero-brand">
-            <HeroesLogo size={68} />
+            <HeroesLogo size={84} />
             <div>
               <h1 className="hero-title">{t('title', locale)}</h1>
               <p className="hero-sub">{t('subtitle', locale)}</p>
             </div>
           </div>
           <div className="hero-controls">
-            <select className="lang-select" value={locale} onChange={e => setLocale(e.target.value)}
-                    aria-label="Sprache">
+            <select className="lang-select" value={locale}
+                    onChange={e => setLocale(e.target.value)}
+                    aria-label="Language">
               {SUPPORTED_LOCALES.map(l => (
                 <option key={l} value={l}>{LOCALE_LABELS[l]}</option>
               ))}
             </select>
+            <div className="version-badge">
+              v{APP_VERSION} · {BUILD_TIME}
+            </div>
           </div>
         </div>
         <p className="hero-intro">{t('intro', locale)}</p>
       </header>
 
-      {/* ─── Setup-Bar (Markt, Karrierelevel) ─────────────────────── */}
+      {/* ─── Setup-Bar ────────────────────────────────────────────── */}
       <div className="setup-bar">
         <label>
           <span className="setup-label">{t('market', locale)}</span>
@@ -60,13 +75,20 @@ export default function App() {
             ))}
           </select>
         </label>
+        {/* Live-Anzeige: aktuelles Hero-Level beim aktiven Verkauf
+           (steigt automatisch beim Stufenwechsel) */}
+        <div className={`level-now ${levelChanged ? 'changed' : ''}`}>
+          <span className="setup-label">JETZT</span>
+          <strong>{heroLevelNow.label}</strong>
+          {levelChanged && <span className="level-up">↑ aufgestiegen</span>}
+        </div>
       </div>
 
-      {/* ─── Hauptbereich: Tree links + Earnings rechts ─────────── */}
+      {/* ─── Hauptbereich ─────────────────────────────────────────── */}
       <main className="main-grid">
         <section className="tree-section">
           <SalesTree
-            heroes={heroes}
+            heroLevelKey={heroLevelKey}
             sales={sales}
             activeSale={activeSale}
             market={market}
@@ -103,14 +125,14 @@ export default function App() {
 
         <aside className="earnings-section">
           <EarningsPanel
-            heroes={heroes}
+            heroLevelKey={heroLevelKey}
             sales={sales}
             activeSale={activeSale}
             market={market}
             locale={locale}
           />
           <BoosterPanel
-            heroes={heroes}
+            heroLevelKey={heroLevelKey}
             sales={sales}
             activeSale={activeSale}
             market={market}
@@ -119,7 +141,6 @@ export default function App() {
         </aside>
       </main>
 
-      {/* ─── Footer ───────────────────────────────────────────────── */}
       <footer className="page-footer">
         <p className="disclaimer">{t('disclaimer', locale)}</p>
         <a className="cta" href="https://go.truu.com" target="_blank" rel="noopener noreferrer">
