@@ -1,185 +1,244 @@
-// SalesTree — Visualisiert den 8-Verkaufs-Baum. Hero (Du) oben mit
-// Krone, 6 Direktkunden in Reihe 1, Sub-Empfehlung Kunde 1.1 in Reihe 2,
-// Sub-Sub Kunde 1.1.1 in Reihe 3.
+// SalesTree — Visualisiert den 13-Verkaufs-Baum mit wählbarem Männchen-
+// Stil (stick / drop / avatar / cape).
 //
-// Visuelle Regeln (mit User abgestimmt):
-//   • Direkte Linien (adjacent in der Sponsor-Kette) zeigen NUR den
-//     success bonus (= Empfehler- oder Differenzprovision), nicht den
-//     Gesamtverdienst. Andere Komponenten (Station, Consultant, Expert)
-//     stehen rechts im Earnings-Panel.
-//   • Bei Empfehlungen aus Reihe 2/3 wird die Linie zum Hero NICHT
-//     senkrecht durch die Zwischen-Männchen geführt, sondern als
-//     geschwungene Kurve außen herum.
-//   • Wird ein Empfehler in der Kette übersprungen, weil er auf gleicher
-//     Stufe wie sein Downline steht (z.B. Kunde 1 in Sale 8 — beide
-//     navigator), zeigen wir trotzdem ein '0 €'-Label an seiner Position
-//     als Lerneffekt.
+// Visuelle Regeln:
+//   • FIG_R = 22 (Mittelwert zwischen ursprünglichen 26 und überarbeiteten 18)
+//   • Build-up: am Anfang ist nur der Hero sichtbar; mit jedem Klick
+//     erscheint das Verkaufs-Männchen + dessen Provisions-Pfade.
+//   • Direkte Linien zeigen NUR den success bonus / die Differenzprovision.
+//   • Kurven aus tieferen Reihen gehen mit zwei Cubic-Bezier-Segmenten
+//     außen am Cluster vorbei (nicht durch andere Männchen).
+//   • Empfehler in der Sponsor-Kette mit gleicher Stufe wie ihr Downline
+//     bekommen ein graues '0 €'-Label.
 
 import { useMemo } from 'react'
 import { commissionLines } from '../lib/successPlan'
 import { buildHeroes } from '../lib/scenario'
-import { t } from '../lib/i18n'
 
 // ─── Layout ────────────────────────────────────────────────────────
 const W = 760
-const H = 640
+const H = 660
 const HERO_X = W / 2
 const HERO_Y = 70
-const ROW1_Y = 220
-const ROW2_Y = 360
-const ROW3_Y = 480
-const ROW4_Y = 580
-const FIG_R  = 18
+const ROW1_Y = 230
+const ROW2_Y = 370
+const ROW3_Y = 490
+const ROW4_Y = 590
+const FIG_R  = 22
 
 function positions() {
-  // 6 Direktkunden gleichmäßig in Reihe 1
   const cols = ['cust1', 'cust2', 'cust3', 'cust4', 'cust6', 'cust7']
-  const startX = 75, endX = W - 75
+  const startX = 80, endX = W - 80
   const step = (endX - startX) / (cols.length - 1)
   const dir = {}
   cols.forEach((id, i) => { dir[id] = { x: startX + i * step, y: ROW1_Y } })
   return {
     hero:   { x: HERO_X, y: HERO_Y },
     ...dir,
-    // Reihe 2: Sub-Empfehlungen unter ihren jeweiligen Sponsoren
-    cust5:  { x: dir.cust1.x, y: ROW2_Y },   // 1.1
-    cust9:  { x: dir.cust2.x, y: ROW2_Y },   // 2.1
-    cust10: { x: dir.cust3.x, y: ROW2_Y },   // 3.1
-    cust12: { x: dir.cust7.x, y: ROW2_Y },   // 6.1 (unter Direkt-Kunde "6" = cust7)
-    // Reihe 3: Sub-Sub-Empfehlungen
-    cust8:  { x: dir.cust1.x, y: ROW3_Y },   // 1.1.1
-    cust11: { x: dir.cust2.x, y: ROW3_Y },   // 2.1.1
-    // Reihe 4
-    cust13: { x: dir.cust1.x, y: ROW4_Y },   // 1.1.1.1
+    cust5:  { x: dir.cust1.x, y: ROW2_Y },
+    cust9:  { x: dir.cust2.x, y: ROW2_Y },
+    cust10: { x: dir.cust3.x, y: ROW2_Y },
+    cust12: { x: dir.cust7.x, y: ROW2_Y },
+    cust8:  { x: dir.cust1.x, y: ROW3_Y },
+    cust11: { x: dir.cust2.x, y: ROW3_Y },
+    cust13: { x: dir.cust1.x, y: ROW4_Y },
   }
 }
 
-// ─── Strichmännchen (kleiner als zuvor, mit Label im Kopf) ────────
-function StickFigure({ x, y, label, isActive, isHero, onClick }) {
-  const fill = isHero
-    ? 'url(#fig-gold)'
-    : isActive ? '#43a047' : '#bcbcbc'
-  const ringColor = isActive ? '#2e7d32' : (isHero ? '#7a5800' : '#888')
+/* ─── Figure-Renderer (4 Stile) ───────────────────────────────── */
+function StickStyle({ x, y, label, isActive, isHero }) {
+  const fill = isHero ? 'url(#fig-gold)' : (isActive ? '#43a047' : '#bcbcbc')
+  const ring = isActive ? '#2e7d32' : (isHero ? '#7a5800' : '#888')
   return (
-    <g
-      onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
-      transform={`translate(${x},${y})`}
-    >
-      {isActive && (
-        <circle r={FIG_R + 6} fill="none" stroke="#43a047" strokeWidth="2" opacity="0.5">
-          <animate attributeName="r" from={FIG_R + 4} to={FIG_R + 12} dur="1.4s" repeatCount="indefinite" />
-          <animate attributeName="opacity" from="0.6" to="0" dur="1.4s" repeatCount="indefinite" />
-        </circle>
-      )}
-      {/* Kopf */}
-      <circle r={FIG_R} fill={fill} stroke={ringColor} strokeWidth="2" />
-      {/* Body */}
-      <line x1="0" y1={FIG_R} x2="0" y2={FIG_R + 28} stroke={ringColor} strokeWidth="3" />
-      <line x1="0" y1={FIG_R + 8} x2="-14" y2={FIG_R + 2} stroke={ringColor} strokeWidth="3" />
-      <line x1="0" y1={FIG_R + 8} x2="14" y2={FIG_R + 2} stroke={ringColor} strokeWidth="3" />
-      <line x1="0" y1={FIG_R + 28} x2="-11" y2={FIG_R + 48} stroke={ringColor} strokeWidth="3" />
-      <line x1="0" y1={FIG_R + 28} x2="11" y2={FIG_R + 48} stroke={ringColor} strokeWidth="3" />
-      {/* Krone für Hero */}
+    <g transform={`translate(${x},${y})`}>
       {isHero && (
-        <g transform={`translate(0, ${-FIG_R - 5})`}>
-          <path d="M -13 0 L -8 -8 L -4 -3 L 0 -10 L 4 -3 L 8 -8 L 13 0 Z"
-                fill="#f5d061" stroke="#7a5800" strokeWidth="1" />
-        </g>
+        <path d="M -16 -28 L -10 -38 L -5 -32 L 0 -42 L 5 -32 L 10 -38 L 16 -28 Z"
+              fill="#f5d061" stroke="#7a5800" strokeWidth="1" />
       )}
-      {/* Label IM Kopf — kleinere Männchen, Text geht in den Kopf */}
-      <text textAnchor="middle" y={5}
-            fontSize={isHero ? 11 : 10} fontWeight="800"
-            fill={isHero ? '#fff' : '#fff'}
-            fontFamily="Roboto, sans-serif"
-            style={{ pointerEvents: 'none' }}>
-        {label}
-      </text>
+      <circle r={FIG_R} fill={fill} stroke={ring} strokeWidth="2" />
+      <line x1="0" y1={FIG_R} x2="0" y2={FIG_R + 32} stroke={ring} strokeWidth="3" />
+      <line x1="0" y1={FIG_R + 9} x2="-16" y2={FIG_R + 2} stroke={ring} strokeWidth="3" />
+      <line x1="0" y1={FIG_R + 9} x2="16" y2={FIG_R + 2} stroke={ring} strokeWidth="3" />
+      <line x1="0" y1={FIG_R + 32} x2="-12" y2={FIG_R + 54} stroke={ring} strokeWidth="3" />
+      <line x1="0" y1={FIG_R + 32} x2="12" y2={FIG_R + 54} stroke={ring} strokeWidth="3" />
+      <text textAnchor="middle" y={5} fontSize="12" fontWeight="700"
+            fill="#fff" style={{ pointerEvents: 'none' }}>{label}</text>
     </g>
   )
 }
 
-// ─── Geschwungener SVG-Pfad — geht außen ums Cluster herum ──────
-// Für Empfehlungen aus Reihe 2 oder 3 zum Hero: nicht durch die
-// Zwischen-Männchen, sondern als sanfte Bezier-Kurve nach außen.
-// Side: 'left' oder 'right' (auto = gegen die Mitte).
+function DropStyle({ x, y, label, isActive, isHero }) {
+  const fill = isHero ? 'url(#fig-gold)' : (isActive ? '#a5d6a7' : '#d8d8dc')
+  const stroke = isActive ? '#2e7d32' : (isHero ? '#7a5800' : '#888')
+  // Tropfen: spitz oben, rund unten — Tangenten-Geometrie. Größe an FIG_R.
+  const r = FIG_R
+  const tipY = -r * 1.8
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {isHero && (
+        <path d="M -14 -52 L -8 -62 L -4 -56 L 0 -66 L 4 -56 L 8 -62 L 14 -52 Z"
+              fill="#f5d061" stroke="#7a5800" strokeWidth="1" />
+      )}
+      <path d={`M 0 ${tipY} L ${-r * 0.92} ${-r * 0.4} A ${r} ${r} 0 1 0 ${r * 0.92} ${-r * 0.4} Z`}
+            fill={fill} stroke={stroke} strokeWidth="2" />
+      <text textAnchor="middle" y={5}
+            fontSize={isHero ? 13 : 12} fontWeight="700"
+            fill={isHero ? '#fff' : (isActive ? '#1b5e20' : '#555')}
+            style={{ pointerEvents: 'none' }}>{label}</text>
+    </g>
+  )
+}
+
+function AvatarStyle({ x, y, label, isActive, isHero }) {
+  const fill = isHero ? 'url(#fig-gold)' : (isActive ? '#dcfce7' : '#f4f4f6')
+  const stroke = isActive ? '#2e7d32' : (isHero ? '#7a5800' : '#bbb')
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {isHero && <circle r={FIG_R + 5} fill="none" stroke="url(#fig-gold)" strokeWidth="3" />}
+      <circle r={FIG_R} fill={fill} stroke={stroke} strokeWidth="1.8" />
+      <text textAnchor="middle" y={5}
+            fontSize={isHero ? 14 : 13} fontWeight="700"
+            fill={isHero ? '#fff' : (isActive ? '#166534' : '#444')}
+            style={{ pointerEvents: 'none' }}>{label}</text>
+      {isHero && (
+        <g transform={`translate(${FIG_R - 4}, ${-FIG_R - 2})`}>
+          <circle r="9" fill="#fff" stroke="#7a5800" strokeWidth="1" />
+          <path d="M -5 1 L -3 -4 L 0 0 L 3 -5 L 5 0 Z"
+                fill="#f5d061" stroke="#7a5800" strokeWidth="0.7" />
+        </g>
+      )}
+    </g>
+  )
+}
+
+function CapeStyle({ x, y, label, isActive, isHero }) {
+  const ring = isActive ? '#2e7d32' : (isHero ? '#7a5800' : '#888')
+  const head = isHero ? '#f5d8a8' : (isActive ? '#c8e6c9' : '#e8e8ea')
+  const body = isHero ? 'url(#fig-gold-soft)' : (isActive ? '#a5d6a7' : '#f0f0f2')
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {isHero && (
+        <path d={`M -${FIG_R + 8} -${FIG_R - 4} Q -${FIG_R + 26} 30 -${FIG_R + 8} 56
+                  L ${FIG_R + 8} 56 Q ${FIG_R + 26} 30 ${FIG_R + 8} -${FIG_R - 4}
+                  L ${FIG_R + 4} -${FIG_R - 4} Q ${FIG_R + 4} 30 0 42
+                  Q -${FIG_R + 4} 30 -${FIG_R + 4} -${FIG_R - 4} Z`}
+              fill="url(#fig-gold)" stroke="#7a5800" strokeWidth="1" />
+      )}
+      {isHero && (
+        <path d="M -12 -42 L -7 -50 L -3 -46 L 0 -52 L 3 -46 L 7 -50 L 12 -42 Z"
+              fill="#f5d061" stroke="#7a5800" strokeWidth="1" />
+      )}
+      <circle r={FIG_R - 5} cy={-22} fill={head} stroke={ring} strokeWidth="1.5" />
+      <path d={`M -${FIG_R - 4} -${FIG_R - 14} L -${FIG_R - 4} 32 Q -${FIG_R - 4} 38 -${FIG_R - 8} 38
+                L ${FIG_R - 8} 38 Q ${FIG_R - 4} 38 ${FIG_R - 4} 32 L ${FIG_R - 4} -${FIG_R - 14} Z`}
+            fill={body} stroke={ring} strokeWidth="1.2" />
+      <path d="M -8 38 L -10 58 M 8 38 L 10 58" stroke={ring} strokeWidth="3" />
+      <text textAnchor="middle" y={20}
+            fontSize="11" fontWeight="700"
+            fill={isHero ? '#fff' : (isActive ? '#1b5e20' : '#555')}
+            style={{ pointerEvents: 'none' }}>{label}</text>
+    </g>
+  )
+}
+
+const FIGURE_STYLES = {
+  stick:  StickStyle,
+  drop:   DropStyle,
+  avatar: AvatarStyle,
+  cape:   CapeStyle,
+}
+
+function Figure({ style, x, y, label, isActive, isHero, onClick }) {
+  const StyleComp = FIGURE_STYLES[style] || StickStyle
+  return (
+    <g
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default', transition: 'all 0.2s' }}
+    >
+      {isActive && (
+        <circle cx={x} cy={y} r={FIG_R + 8} fill="none"
+                stroke="#43a047" strokeWidth="2" opacity="0.5">
+          <animate attributeName="r" from={FIG_R + 6} to={FIG_R + 14} dur="1.4s" repeatCount="indefinite" />
+          <animate attributeName="opacity" from="0.6" to="0" dur="1.4s" repeatCount="indefinite" />
+        </circle>
+      )}
+      <StyleComp x={x} y={y} label={label} isActive={isActive} isHero={isHero} />
+    </g>
+  )
+}
+
+/* ─── Kurven-Pfad: zwei Cubic-Bezier-Segmente, außen am Cluster vorbei ──── */
+// Beide Segmente haben Control Points bei outerX → der Pfad bleibt
+// sichtbar AUSSERHALB des Männchen-Clusters und kreuzt keine andere
+// Figur. Mid-Punkt (für Label) ist (outerX, midY).
 function curvedPathD(sx, sy, ex, ey) {
-  // Bias: wenn Start-X links der Mitte → Kurve geht nach links raus,
-  //       sonst nach rechts.
   const dir = sx < W / 2 ? -1 : 1
-  const offset = 160 * dir
-  const cx1 = sx + offset
-  const cy1 = sy
-  const cx2 = ex + offset
-  const cy2 = ey
-  return `M ${sx},${sy} C ${cx1},${cy1} ${cx2},${cy2} ${ex},${ey}`
+  const outerX = dir < 0 ? 28 : W - 28
+  const midY = (sy + ey) / 2
+  return `M ${sx},${sy}` +
+         ` C ${outerX},${sy} ${outerX},${(sy + midY) / 2} ${outerX},${midY}` +
+         ` C ${outerX},${(midY + ey) / 2} ${outerX},${ey} ${ex},${ey}`
 }
 
-// Punkt entlang der Kurve bei t=0.5 — für Label-Position
-function curvedPathMidpoint(sx, sy, ex, ey) {
+function curvedMidpoint(sx, sy, ex, ey) {
   const dir = sx < W / 2 ? -1 : 1
-  const offset = 160 * dir
-  const cx1 = sx + offset, cy1 = sy
-  const cx2 = ex + offset, cy2 = ey
-  // Cubic Bezier point at t=0.5
-  const t = 0.5, omt = 1 - t
-  const x = omt*omt*omt*sx + 3*omt*omt*t*cx1 + 3*omt*t*t*cx2 + t*t*t*ex
-  const y = omt*omt*omt*sy + 3*omt*omt*t*cy1 + 3*omt*t*t*cy2 + t*t*t*ey
-  return { x, y }
+  return { x: dir < 0 ? 28 : W - 28, y: (sy + ey) / 2 }
 }
 
-export default function SalesTree({ heroLevelKey, sales, activeSale, market, locale, onSelectSale }) {
+export default function SalesTree({
+  heroLevelKey, sales, activeSale, market, locale,
+  onSelectSale, figureStyle = 'stick',
+}) {
   const pos = positions()
   const showAll = activeSale > sales.length
   const totalSales = sales.length
 
-  // Heroes-Layout fürs Tree-Drawing — wir nehmen den Stand BEIM aktuell
-  // gewählten Verkauf, damit z.B. das aktive Männchen die richtige Stufe
-  // hat (für Tooltip/Kontext). Im All-Mode zeigen wir den Endstand.
+  // Welche Männchen sind sichtbar? Hero immer; Kunden nur, wenn ihr
+  // Verkauf bereits durchgeklickt wurde. → Build-up-Animation.
+  const visibleIds = useMemo(() => {
+    const set = new Set(['hero'])
+    const upto = showAll ? totalSales : activeSale
+    for (let i = 0; i < upto; i++) {
+      if (sales[i]?.customerId) set.add(sales[i].customerId)
+    }
+    return set
+  }, [activeSale, showAll, sales, totalSales])
+
   const heroesAtSale = useMemo(() => {
     const n = showAll ? totalSales : activeSale
     return buildHeroes(heroLevelKey, n)
   }, [heroLevelKey, activeSale, showAll, totalSales])
 
-  // Aktive Verkäufe (Single oder All-Mode)
   const activeSales = useMemo(() => {
     if (showAll) return sales
     return sales.filter(s => s.n === activeSale)
   }, [sales, activeSale, showAll])
 
-  // Provisionslinien für die aktiven Verkäufe — pro Verkauf den Hero-Stand
-  // im Moment dieses Verkaufs verwenden.
   const provisionsBySale = useMemo(() => {
     return activeSales.map(sale => {
       const heroesNow = buildHeroes(heroLevelKey, sale.n)
       const lines = commissionLines(sale, heroesNow, market, { includeZeroLines: true })
-      // Filter: nur success-Linien sind für Tree-Visualisierung relevant;
-      // Station/Consultant/Expert flossen an den Hero (oder andere) und
-      // erscheinen rechts im Earnings-Panel.
       const successLines = lines.filter(l => l.kind === 'success')
       return { sale, heroesNow, successLines }
     })
   }, [activeSales, heroLevelKey, market])
 
-  // Sponsor-Hierarchie-Linien (immer dezent sichtbar, gestrichelt)
+  // Sponsor-Hierarchie-Linien — nur zwischen sichtbaren Männchen
   const sponsorLines = [
-    // Reihe 1 → Hero
     { from: 'cust1', to: 'hero' }, { from: 'cust2', to: 'hero' },
     { from: 'cust3', to: 'hero' }, { from: 'cust4', to: 'hero' },
     { from: 'cust6', to: 'hero' }, { from: 'cust7', to: 'hero' },
-    // Reihe 2 → Reihe 1
     { from: 'cust5',  to: 'cust1' },
     { from: 'cust9',  to: 'cust2' },
     { from: 'cust10', to: 'cust3' },
     { from: 'cust12', to: 'cust7' },
-    // Reihe 3 → Reihe 2
     { from: 'cust8',  to: 'cust5' },
     { from: 'cust11', to: 'cust9' },
-    // Reihe 4 → Reihe 3
     { from: 'cust13', to: 'cust8' },
-  ]
+  ].filter(l => visibleIds.has(l.from) && visibleIds.has(l.to))
 
   function FigureFor(id) {
+    if (!visibleIds.has(id)) return null
     const hero = heroesAtSale.find(h => h.id === id)
     if (!hero) return null
     const p = pos[id]
@@ -188,8 +247,8 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
     const isHero = id === 'hero'
     const label = hero.label
     return (
-      <StickFigure
-        key={id}
+      <Figure
+        key={id} style={figureStyle}
         x={p.x} y={p.y}
         label={label}
         isActive={isActiveCustomer}
@@ -203,17 +262,11 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
     )
   }
 
-  // ─── Provisions-Pfad-Rendering ────────────────────────────────
-  // Für jeden Sale: laufe die Sponsor-Kette vom directSeller aufwärts.
-  // Adjacent-Segmente (directSeller→Sponsor, dann Sponsor→Sponsor.Sponsor)
-  // werden als gerade Linie gezeichnet, jeweils mit dem Differenzprov.
-  // Beträge ≥ 2 Tier-Sprünge zum Hero: geschwungene Kurve außen vorbei.
+  // Provisions-Pfade berechnen — pro Sale die Sponsor-Kette ablaufen
   const provisionVisuals = useMemo(() => {
-    const visuals = []   // {kind: 'segment'|'curve'|'zero', sx,sy,ex,ey, amount, key, saleN}
-    provisionsBySale.forEach(({ sale, heroesNow, successLines }, sIx) => {
-      // Map: recipientId → success amount (auch 0)
+    const visuals = []
+    provisionsBySale.forEach(({ sale, heroesNow, successLines }) => {
       const byRecipient = new Map(successLines.map(l => [l.recipient, l.amount]))
-      // Sponsor-Kette vom directSeller bis ganz nach oben
       const chain = []
       let curId = sale.directSellerId
       while (curId) {
@@ -222,13 +275,10 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
         if (!h) break
         curId = h.sponsorId
       }
-      // chain[0] = directSeller, chain[N-1] = Hero (hopefully)
-
-      // Bought-Customer-Position als Start für die ersten Segmente
       const boughtId = sale.customerId
       const boughtP = pos[boughtId]
 
-      // Segment 1: bought → directSeller (immer adjacent, gerade Linie)
+      // Segment 1: bought → directSeller
       const ds = chain[0]
       const dsP = pos[ds]
       if (boughtP && dsP) {
@@ -236,17 +286,11 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
         visuals.push({
           kind: 'segment', key: `${sale.n}-bought-ds`, saleN: sale.n,
           sx: boughtP.x, sy: boughtP.y - FIG_R,
-          ex: dsP.x, ey: dsP.y + FIG_R + 50,
-          amount,
-          isZero: amount === 0,
+          ex: dsP.x, ey: dsP.y + FIG_R + 56,
+          amount, isZero: amount === 0,
         })
       }
 
-      // Weitere Sponsor-Segmente — wenn mehr als 1 Tier in der Kette
-      // ABOVE directSeller: für jedes Glied entweder gerade Linie (wenn
-      // das Glied Provision bekommt) oder Zero-Marker (wenn 0).
-      // Hero (= chain[last]) bekommt die geschwungene Kurve, falls er
-      // nicht direkt über directSeller hängt.
       for (let i = 1; i < chain.length; i++) {
         const upperId = chain[i]
         const lowerId = chain[i - 1]
@@ -257,29 +301,27 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
         const isHero = upperId === 'hero'
         const isAdjacentToHero = isHero && i === 1
         if (isHero && !isAdjacentToHero) {
-          // Hero ist mehrere Tiers entfernt → Kurve direkt vom bought-
-          // Customer außen herum zum Hero.
+          // Curve außen herum vom bought-Customer zum Hero
           visuals.push({
             kind: 'curve', key: `${sale.n}-curve-hero`, saleN: sale.n,
-            sx: boughtP.x, sy: boughtP.y - FIG_R - 5,
-            ex: upperP.x, ey: upperP.y + FIG_R + 50,
+            sx: boughtP.x, sy: boughtP.y - FIG_R,
+            ex: upperP.x, ey: upperP.y + FIG_R + 56,
             amount,
           })
         } else {
-          // Adjacent-Segment vom unteren Männchen zum oberen
           visuals.push({
             kind: 'segment', key: `${sale.n}-${lowerId}-${upperId}`, saleN: sale.n,
             sx: lowerP.x, sy: lowerP.y - FIG_R,
-            ex: upperP.x, ey: upperP.y + FIG_R + 50,
-            amount,
-            isZero: amount === 0,
+            ex: upperP.x, ey: upperP.y + FIG_R + 56,
+            amount, isZero: amount === 0,
           })
         }
       }
-      void sIx
     })
     return visuals
   }, [provisionsBySale])
+
+  const fmtAmt = (n) => `+${n.toLocaleString(locale === 'de' || locale === 'ch' || locale === 'bar' ? 'de-DE' : 'en-US')} ${market === 'ch' ? 'CHF' : '€'}`
 
   return (
     <div className="sales-tree-wrap">
@@ -289,6 +331,10 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
             <stop offset="0%" stopColor="#f5d061" />
             <stop offset="60%" stopColor="#b8860b" />
             <stop offset="100%" stopColor="#7a5800" />
+          </linearGradient>
+          <linearGradient id="fig-gold-soft" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fce8a3" />
+            <stop offset="100%" stopColor="#b8860b" />
           </linearGradient>
           <marker id="arrow-active" viewBox="0 0 10 10" refX="9" refY="5"
                   markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -300,21 +346,20 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
           </marker>
         </defs>
 
-        {/* Sponsor-Hierarchie (immer sichtbar, gestrichelt) */}
+        {/* Sponsor-Hierarchie (gestrichelt, dezent) */}
         {sponsorLines.map((l, i) => {
           const a = pos[l.from], b = pos[l.to]
           if (!a || !b) return null
           return (
             <line key={`sp-${i}`}
-              x1={a.x} y1={a.y - FIG_R} x2={b.x} y2={b.y + FIG_R + 50}
+              x1={a.x} y1={a.y - FIG_R} x2={b.x} y2={b.y + FIG_R + 56}
               stroke="#dcdcdc" strokeWidth="1.5" strokeDasharray="3 4" />
           )
         })}
 
-        {/* Provisions-Pfade — Curves zuerst (damit Segmente drüber) */}
+        {/* Curves (außen am Cluster vorbei) */}
         {provisionVisuals.filter(v => v.kind === 'curve').map(v => {
-          const fmtAmount = `+${v.amount.toLocaleString(locale === 'de' ? 'de-DE' : 'en-US')} ${market === 'ch' ? 'CHF' : '€'}`
-          const mid = curvedPathMidpoint(v.sx, v.sy, v.ex, v.ey)
+          const mid = curvedMidpoint(v.sx, v.sy, v.ex, v.ey)
           return (
             <g key={v.key}>
               <path d={curvedPathD(v.sx, v.sy, v.ex, v.ey)}
@@ -325,7 +370,7 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
                       fill="#fff" stroke="#43a047" strokeWidth="1.5" />
                 <text x="0" y="5" textAnchor="middle"
                       fontSize="12" fontWeight="700" fill="#1b5e20">
-                  {fmtAmount}
+                  {fmtAmt(v.amount)}
                 </text>
               </g>
             </g>
@@ -353,7 +398,6 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
               </g>
             )
           }
-          const fmtAmount = `+${v.amount.toLocaleString(locale === 'de' ? 'de-DE' : 'en-US')} ${market === 'ch' ? 'CHF' : '€'}`
           return (
             <g key={v.key}>
               <line x1={v.sx} y1={v.sy} x2={v.ex} y2={v.ey}
@@ -364,17 +408,16 @@ export default function SalesTree({ heroLevelKey, sales, activeSale, market, loc
                       fill="#fff" stroke="#43a047" strokeWidth="1.5" />
                 <text x="0" y="4" textAnchor="middle"
                       fontSize="12" fontWeight="700" fill="#1b5e20">
-                  {fmtAmount}
+                  {fmtAmt(v.amount)}
                 </text>
               </g>
             </g>
           )
         })}
 
-        {/* Männchen-Layer — über die Linien */}
+        {/* Männchen-Layer */}
         {Object.keys(pos).map(id => FigureFor(id))}
       </svg>
-      {void t /* keep import in case needed later */}
     </div>
   )
 }

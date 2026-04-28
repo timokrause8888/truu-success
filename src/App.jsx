@@ -1,28 +1,34 @@
 import { useState } from 'react'
 import { LEVELS } from './lib/successPlan'
 import { buildSales, DEFAULT_HERO_LEVEL_KEY, heroLevelAtSale } from './lib/scenario'
-import { t, detectLocale, SUPPORTED_LOCALES, LOCALE_LABELS } from './lib/i18n'
+import { t, detectLocale, FLAGS, LOCALES_ORDER, LOCALE_LABELS } from './lib/i18n'
 import SalesTree from './components/SalesTree'
 import EarningsPanel from './components/EarningsPanel'
 import BoosterPanel from './components/BoosterPanel'
 import HeroesLogo from './components/HeroesLogo'
 
-// Vite-injected (siehe vite.config.js define-Block)
 /* eslint-disable no-undef */
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'local'
 const BUILD_TIME  = typeof __BUILD_TIME__  !== 'undefined' ? __BUILD_TIME__  : ''
 /* eslint-enable no-undef */
 
+// Vier Männchen-Stile zur Auswahl. Mini-Vorschau-SVG pro Button.
+const FIGURE_OPTIONS = [
+  { key: 'stick',  label: 'Strichmännchen' },
+  { key: 'drop',   label: 'Wassertropfen' },
+  { key: 'avatar', label: 'Avatar-Kreis' },
+  { key: 'cape',   label: 'Helden mit Cape' },
+]
+
 export default function App() {
   const [locale, setLocale] = useState(() => detectLocale())
   const [market, setMarket] = useState('de')
   const [heroLevelKey, setHeroLevelKey] = useState(DEFAULT_HERO_LEVEL_KEY)
-  const [activeSale, setActiveSale] = useState(1)
+  const [activeSale, setActiveSale] = useState(0)         // 0 = Start (kein Verkauf)
+  const [figureStyle, setFigureStyle] = useState('avatar')
 
   const sales = buildSales()
   const totalSales = sales.length
-  // Hero-Level am aktuell gewählten Verkauf — kann während Click-Through
-  // automatisch hochsteigen (z.B. von navigator → commander bei Sale 7).
   const heroLevelNow = heroLevelAtSale(heroLevelKey,
     activeSale > totalSales ? totalSales : activeSale)
   const startLevel = LEVELS.find(l => l.key === heroLevelKey) || LEVELS[0]
@@ -30,7 +36,6 @@ export default function App() {
 
   return (
     <div className="page">
-      {/* ─── Header ───────────────────────────────────────────────── */}
       <header className="hero">
         <div className="hero-inner">
           <div className="hero-brand">
@@ -41,13 +46,17 @@ export default function App() {
             </div>
           </div>
           <div className="hero-controls">
-            <select className="lang-select" value={locale}
-                    onChange={e => setLocale(e.target.value)}
-                    aria-label="Language">
-              {SUPPORTED_LOCALES.map(l => (
-                <option key={l} value={l}>{LOCALE_LABELS[l]}</option>
+            {/* Flaggen-Reihe wie bei truu-save / truu-tasks */}
+            <div className="language-switcher">
+              {LOCALES_ORDER.map(l => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={`language-btn ${locale === l ? 'active' : ''}`}
+                  title={LOCALE_LABELS[l]}
+                >{FLAGS[l]}</button>
               ))}
-            </select>
+            </div>
             <div className="version-badge">
               v{APP_VERSION} · {BUILD_TIME}
             </div>
@@ -56,7 +65,7 @@ export default function App() {
         <p className="hero-intro">{t('intro', locale)}</p>
       </header>
 
-      {/* ─── Setup-Bar ────────────────────────────────────────────── */}
+      {/* Setup-Bar: Markt + Karrierestatus + Trennstrich + Stilauswahl + JETZT */}
       <div className="setup-bar">
         <label>
           <span className="setup-label">{t('market', locale)}</span>
@@ -75,8 +84,29 @@ export default function App() {
             ))}
           </select>
         </label>
-        {/* Live-Anzeige: aktuelles Hero-Level beim aktiven Verkauf
-           (steigt automatisch beim Stufenwechsel) */}
+
+        <div className="setup-divider" />
+
+        {/* Stil-Auswahl als Pill-Group */}
+        <div className="style-picker">
+          <span className="setup-label">Stil</span>
+          <div className="style-pills">
+            {FIGURE_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                className={`style-pill ${figureStyle === opt.key ? 'active' : ''}`}
+                onClick={() => setFigureStyle(opt.key)}
+                title={opt.label}
+              >
+                <StylePreview kind={opt.key} />
+                <span className="style-pill-label">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="setup-divider" />
+
         <div className={`level-now ${levelChanged ? 'changed' : ''}`}>
           <span className="setup-label">JETZT</span>
           <strong>{heroLevelNow.label}</strong>
@@ -84,7 +114,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* ─── Hauptbereich ─────────────────────────────────────────── */}
       <main className="main-grid">
         <section className="tree-section">
           <SalesTree
@@ -94,14 +123,20 @@ export default function App() {
             market={market}
             locale={locale}
             onSelectSale={setActiveSale}
+            figureStyle={figureStyle}
           />
           <div className="sale-nav">
             <button
               className="sale-nav-btn"
-              onClick={() => setActiveSale(s => Math.max(1, s - 1))}
-              disabled={activeSale <= 1}
+              onClick={() => setActiveSale(s => Math.max(0, s - 1))}
+              disabled={activeSale <= 0}
             >{t('prev', locale)}</button>
             <div className="sale-nav-pills">
+              <button
+                className={`sale-pill ${activeSale === 0 ? 'active' : ''}`}
+                onClick={() => setActiveSale(0)}
+                title="Start"
+              >·</button>
               {sales.map(s => (
                 <button
                   key={s.n}
@@ -148,5 +183,39 @@ export default function App() {
         </a>
       </footer>
     </div>
+  )
+}
+
+// Mini-Vorschau-SVG für jeden Stil (im Stil-Picker)
+function StylePreview({ kind }) {
+  return (
+    <svg width="22" height="26" viewBox="0 0 22 26">
+      {kind === 'stick' && (
+        <g>
+          <circle cx="11" cy="7" r="5" fill="#b8860b" />
+          <line x1="11" y1="12" x2="11" y2="20" stroke="#b8860b" strokeWidth="2" />
+          <line x1="11" y1="14" x2="6" y2="12" stroke="#b8860b" strokeWidth="2" />
+          <line x1="11" y1="14" x2="16" y2="12" stroke="#b8860b" strokeWidth="2" />
+          <line x1="11" y1="20" x2="7" y2="25" stroke="#b8860b" strokeWidth="2" />
+          <line x1="11" y1="20" x2="15" y2="25" stroke="#b8860b" strokeWidth="2" />
+        </g>
+      )}
+      {kind === 'drop' && (
+        <path d="M 11 1 L 4 13 A 7 7 0 1 0 18 13 Z" fill="#b8860b" />
+      )}
+      {kind === 'avatar' && (
+        <g>
+          <circle cx="11" cy="11" r="9" fill="none" stroke="#b8860b" strokeWidth="2" />
+          <circle cx="11" cy="11" r="6" fill="#b8860b" />
+        </g>
+      )}
+      {kind === 'cape' && (
+        <g>
+          <path d="M 4 6 Q 1 18 4 22 L 18 22 Q 21 18 18 6 L 14 6 Q 14 18 11 20 Q 8 18 8 6 Z"
+                fill="#b8860b" />
+          <circle cx="11" cy="6" r="3.5" fill="#f5d8a8" stroke="#7a5800" strokeWidth="0.8" />
+        </g>
+      )}
+    </svg>
   )
 }

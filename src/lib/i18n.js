@@ -321,6 +321,15 @@ export const LOCALE_LABELS = {
   bar: '🥨 Bayerisch',
 }
 
+// Flaggen-Reihenfolge & Emoji für die Flag-Button-Reihe (analog zu
+// truu-save / truu-tasks). Bayern bekommt eine Brezel als Pseudo-Flagge.
+export const FLAGS = {
+  de: '🇩🇪', ch: '🇨🇭', en: '🇬🇧', es: '🇪🇸', bg: '🇧🇬',
+  fr: '🇫🇷', it: '🇮🇹', pt: '🇵🇹', nl: '🇳🇱', ru: '🇷🇺',
+  bar: '🥨',
+}
+export const LOCALES_ORDER = ['de', 'ch', 'en', 'es', 'bg', 'fr', 'it', 'pt', 'nl', 'ru', 'bar']
+
 export function detectLocale() {
   if (typeof navigator === 'undefined') return 'de'
   const nav = (navigator.language || 'de').toLowerCase()

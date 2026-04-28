@@ -70,18 +70,29 @@ body {
   font-weight: 400; letter-spacing: 0.5px;
   text-align: right;
 }
-.lang-select {
-  padding: 8px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--ink);
-  font-family: inherit; font-size: 14px; font-weight: 500;
-  cursor: pointer;
+/* Flaggen-Reihe wie bei truu-save / truu-tasks */
+.language-switcher {
+  display: flex; gap: 5px; flex-wrap: wrap;
+  justify-content: flex-end;
 }
-.lang-select:focus {
-  outline: none; border-color: var(--gold-2);
-  box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
+.language-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: #f0f2f5;
+  cursor: pointer;
+  font-size: 1.05rem;
+  padding: 0; transition: all 0.15s;
+}
+.language-btn:hover {
+  border-color: var(--gold-2);
+  background: var(--cream-3);
+}
+.language-btn.active {
+  border-color: var(--gold-2);
+  background: var(--cream-3);
+  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.25);
 }
 .hero-intro {
   margin: 16px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.55;
@@ -112,6 +123,39 @@ body {
   font-family: inherit; font-size: 14px; font-weight: 500;
   min-width: 240px;
 }
+
+/* Trennstrich zwischen Setup-Gruppen */
+.setup-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* Stil-Picker — 4 Pills mit Mini-SVG-Vorschau */
+.style-picker {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.style-pills {
+  display: flex; gap: 4px;
+}
+.style-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px;
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink-2);
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.style-pill:hover { border-color: var(--gold-2); color: var(--gold-3); }
+.style-pill.active {
+  background: var(--cream-3); border-color: var(--gold-2);
+  color: var(--gold-3);
+  box-shadow: 0 1px 4px rgba(184, 134, 11, 0.2);
+}
+.style-pill-label { white-space: nowrap; }
 
 /* Live-Anzeige des AKTUELLEN Hero-Levels (steigt während Click-Through) */
 .level-now {
