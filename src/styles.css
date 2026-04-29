@@ -99,6 +99,85 @@ body {
   max-width: 720px;
 }
 
+/* ─── Modus-Bar (Eigenumsatz / Teamaufbau) — eigene Zeile über der Setup-Bar */
+.mode-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.mode-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 18px 22px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.15s;
+  box-shadow: 0 2px 10px rgba(122, 88, 0, 0.06);
+}
+.mode-btn:hover:not(.active) {
+  border-color: var(--gold-2);
+  background: var(--cream);
+}
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--cream-3) 0%, #fff 100%);
+  border-color: var(--gold-2);
+  box-shadow: 0 4px 18px rgba(184, 134, 11, 0.18);
+}
+.mode-btn-icon {
+  font-size: 22px; line-height: 1;
+}
+.mode-btn-label {
+  font-size: 16px; font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.mode-btn.active .mode-btn-label {
+  color: var(--gold-3);
+}
+.mode-btn-sub {
+  font-size: 12px; color: var(--ink-3); font-weight: 500;
+}
+
+@media (max-width: 700px) {
+  .mode-bar { gap: 8px; }
+  .mode-btn { padding: 12px 14px; }
+  .mode-btn-icon { font-size: 18px; }
+  .mode-btn-label { font-size: 14px; }
+  .mode-btn-sub { font-size: 11px; }
+}
+
+/* Team-Aufbau Coming-Soon-Card */
+.team-coming-soon {
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px 20px;
+}
+.team-coming-card {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 36px;
+  text-align: center;
+  max-width: 520px;
+  box-shadow: var(--shadow);
+}
+.team-coming-icon {
+  font-size: 48px; margin-bottom: 14px; line-height: 1;
+}
+.team-coming-card h2 {
+  margin: 0 0 12px;
+  font-size: 22px; font-weight: 800;
+  color: var(--gold-3);
+}
+.team-coming-card p {
+  margin: 0 0 24px;
+  font-size: 15px; line-height: 1.6;
+  color: var(--ink-2);
+}
+
 /* ─── Setup-Bar (Markt + Karrierelevel) ─────────────────────────── */
 .setup-bar {
   display: flex; gap: 14px; align-items: center; flex-wrap: wrap;

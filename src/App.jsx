@@ -28,6 +28,9 @@ export default function App() {
   const [activeSale, setActiveSale] = useState(0)         // 0 = Start (kein Verkauf)
   const [figureStyle, setFigureStyle] = useState('avatar')
   const [pdfOpen, setPdfOpen] = useState(false)
+  // Modus-Auswahl ganz oben: Eigenumsatz (= aktueller Klick-Calculator) vs.
+  // Teamaufbau (= kommt als nächste Iteration). Default: Eigenumsatz.
+  const [mode, setMode] = useState('eigen')   // 'eigen' | 'team'
 
   const sales = buildSales()
   const totalSales = sales.length
@@ -66,6 +69,27 @@ export default function App() {
         </div>
         <p className="hero-intro">{t('intro', locale)}</p>
       </header>
+
+      {/* Modus-Tabs (Eigenumsatz vs. Teamaufbau) — eigene Zeile direkt
+         über der Setup-Bar. Zwei große Buttons in Weiß, geteilt 50/50. */}
+      <div className="mode-bar">
+        <button
+          className={`mode-btn ${mode === 'eigen' ? 'active' : ''}`}
+          onClick={() => setMode('eigen')}
+        >
+          <span className="mode-btn-icon">👤</span>
+          <span className="mode-btn-label">{t('mode_eigen', locale)}</span>
+          <span className="mode-btn-sub">{t('mode_eigen_sub', locale)}</span>
+        </button>
+        <button
+          className={`mode-btn ${mode === 'team' ? 'active' : ''}`}
+          onClick={() => setMode('team')}
+        >
+          <span className="mode-btn-icon">👥</span>
+          <span className="mode-btn-label">{t('mode_team', locale)}</span>
+          <span className="mode-btn-sub">{t('mode_team_sub', locale)}</span>
+        </button>
+      </div>
 
       {/* Setup-Bar: Markt + Karrierestatus + Trennstrich + Stilauswahl + JETZT */}
       <div className="setup-bar">
@@ -116,6 +140,20 @@ export default function App() {
         </div>
       </div>
 
+      {mode === 'team' && (
+        <main className="team-coming-soon">
+          <div className="team-coming-card">
+            <div className="team-coming-icon">👥</div>
+            <h2>{t('team_soon_title', locale)}</h2>
+            <p>{t('team_soon_text', locale)}</p>
+            <button className="cta cta-secondary" onClick={() => setMode('eigen')}>
+              ← {t('mode_eigen', locale)}
+            </button>
+          </div>
+        </main>
+      )}
+
+      {mode === 'eigen' && (
       <main className="main-grid">
         <section className="tree-section">
           <SalesTree
@@ -177,6 +215,7 @@ export default function App() {
           />
         </aside>
       </main>
+      )}
 
       <footer className="page-footer">
         <p className="disclaimer">{t('disclaimer', locale)}</p>
