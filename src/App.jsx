@@ -63,7 +63,7 @@ export default function App() {
               ))}
             </div>
             <div className="version-badge">
-              v{APP_VERSION} · {BUILD_TIME}
+              aktuelle Version: {APP_VERSION} | {BUILD_TIME}
             </div>
           </div>
         </div>
