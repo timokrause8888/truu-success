@@ -6,6 +6,7 @@ import SalesTree from './components/SalesTree'
 import EarningsPanel from './components/EarningsPanel'
 import BoosterPanel from './components/BoosterPanel'
 import HeroesLogo from './components/HeroesLogo'
+import PlanPdfViewer from './components/PlanPdfViewer'
 
 /* eslint-disable no-undef */
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'local'
@@ -26,6 +27,7 @@ export default function App() {
   const [heroLevelKey, setHeroLevelKey] = useState(DEFAULT_HERO_LEVEL_KEY)
   const [activeSale, setActiveSale] = useState(0)         // 0 = Start (kein Verkauf)
   const [figureStyle, setFigureStyle] = useState('avatar')
+  const [pdfOpen, setPdfOpen] = useState(false)
 
   const sales = buildSales()
   const totalSales = sales.length
@@ -178,10 +180,17 @@ export default function App() {
 
       <footer className="page-footer">
         <p className="disclaimer">{t('disclaimer', locale)}</p>
-        <a className="cta" href="https://go.truu.com" target="_blank" rel="noopener noreferrer">
-          {t('contact', locale)} →
-        </a>
+        <div className="footer-actions">
+          <button type="button" className="cta cta-secondary" onClick={() => setPdfOpen(true)}>
+            {t('pdf_btn', locale)}
+          </button>
+          <a className="cta" href="https://go.truu.com" target="_blank" rel="noopener noreferrer">
+            {t('contact', locale)} →
+          </a>
+        </div>
       </footer>
+
+      <PlanPdfViewer open={pdfOpen} onClose={() => setPdfOpen(false)} locale={locale} />
     </div>
   )
 }

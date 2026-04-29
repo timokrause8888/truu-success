@@ -47,6 +47,9 @@ const TRANSLATIONS = {
     /* Footer */
     disclaimer: 'Beispielrechnung. Keine Verdienst-Garantie. Stand: Plan-Version 04/2026.',
     contact: 'Werde truu hero',
+    pdf_btn: '📖 Plan-PDF', pdf_title: 'truu success plan — Vollständige Broschüre',
+    pdf_download: 'Herunterladen', pdf_download_tip: 'PDF herunterladen', pdf_open_tab: 'In neuem Tab öffnen', pdf_close: 'Schließen',
+    pdf_fallback: 'Falls die Vorschau nicht lädt:',
   },
   ch: {
     title: 'truu success', subtitle: 'Verdienstrechner',
@@ -73,6 +76,9 @@ const TRANSLATIONS = {
     tip_world: 'Anteilig aus globalem Pool, ab 12 Punkten/Mon.',
     disclaimer: 'Beispielrechnung. Keine Verdienst-Garantie. Stand: Plan-Version 04/2026.',
     contact: 'Werde truu hero',
+    pdf_btn: '📖 Plan-PDF', pdf_title: 'truu success plan — Vollständige Broschüre',
+    pdf_download: 'Herunterladen', pdf_download_tip: 'PDF herunterladen', pdf_open_tab: 'In neuem Tab öffnen', pdf_close: 'Schliessen',
+    pdf_fallback: 'Falls die Vorschau nicht lädt:',
   },
   en: {
     title: 'truu success', subtitle: 'Earnings Calculator',
@@ -99,6 +105,9 @@ const TRANSLATIONS = {
     tip_world: 'Pro-rata from the global pool, from 12 points/month.',
     disclaimer: 'Example calculation. No earnings guarantee. Plan version 04/2026.',
     contact: 'Become a truu hero',
+    pdf_btn: '📖 Plan PDF', pdf_title: 'truu success plan — Complete brochure',
+    pdf_download: 'Download', pdf_download_tip: 'Download PDF', pdf_open_tab: 'Open in new tab', pdf_close: 'Close',
+    pdf_fallback: 'If the preview does not load:',
   },
   es: {
     title: 'truu success', subtitle: 'Calculadora de ingresos',
@@ -125,6 +134,9 @@ const TRANSLATIONS = {
     tip_world: 'Proporcional del pool global, a partir de 12 puntos/mes.',
     disclaimer: 'Cálculo de ejemplo. Sin garantía de ingresos. Plan 04/2026.',
     contact: 'Conviértete en truu hero',
+    pdf_btn: '📖 PDF del plan', pdf_title: 'truu success plan — Folleto completo',
+    pdf_download: 'Descargar', pdf_download_tip: 'Descargar PDF', pdf_open_tab: 'Abrir en pestaña nueva', pdf_close: 'Cerrar',
+    pdf_fallback: 'Si la vista previa no carga:',
   },
   bg: {
     title: 'truu success', subtitle: 'Калкулатор на доходи',
@@ -151,6 +163,9 @@ const TRANSLATIONS = {
     tip_world: 'Пропорционално от глобалния пул, от 12 точки/месец.',
     disclaimer: 'Пример. Без гаранция за доход. План версия 04/2026.',
     contact: 'Стани truu hero',
+    pdf_btn: '📖 PDF на плана', pdf_title: 'truu success plan — Пълна брошура',
+    pdf_download: 'Изтегляне', pdf_download_tip: 'Изтегли PDF', pdf_open_tab: 'Отвори в нов раздел', pdf_close: 'Затвори',
+    pdf_fallback: 'Ако визуализацията не зарежда:',
   },
   fr: {
     title: 'truu success', subtitle: 'Calculateur de revenus',
@@ -177,6 +192,9 @@ const TRANSLATIONS = {
     tip_world: 'Au prorata du pool mondial, dès 12 points/mois.',
     disclaimer: 'Calcul d\'exemple. Sans garantie. Plan 04/2026.',
     contact: 'Devenez truu hero',
+    pdf_btn: '📖 PDF du plan', pdf_title: 'truu success plan — Brochure complète',
+    pdf_download: 'Télécharger', pdf_download_tip: 'Télécharger le PDF', pdf_open_tab: 'Ouvrir dans un nouvel onglet', pdf_close: 'Fermer',
+    pdf_fallback: 'Si l\'aperçu ne se charge pas :',
   },
   it: {
     title: 'truu success', subtitle: 'Calcolatore di guadagni',
@@ -203,6 +221,9 @@ const TRANSLATIONS = {
     tip_world: 'Pro quota dal pool globale, da 12 punti/mese.',
     disclaimer: 'Calcolo esemplificativo. Senza garanzia. Piano 04/2026.',
     contact: 'Diventa truu hero',
+    pdf_btn: '📖 PDF del piano', pdf_title: 'truu success plan — Brochure completa',
+    pdf_download: 'Scarica', pdf_download_tip: 'Scarica il PDF', pdf_open_tab: 'Apri in una nuova scheda', pdf_close: 'Chiudi',
+    pdf_fallback: 'Se l\'anteprima non si carica:',
   },
   nl: {
     title: 'truu success', subtitle: 'Verdiensten-calculator',
@@ -229,6 +250,9 @@ const TRANSLATIONS = {
     tip_world: 'Naar rato van de wereldwijde pool, vanaf 12 punten/maand.',
     disclaimer: 'Voorbeeldberekening. Geen garantie. Plan 04/2026.',
     contact: 'Word truu hero',
+    pdf_btn: '📖 Plan-PDF', pdf_title: 'truu success plan — Volledige brochure',
+    pdf_download: 'Downloaden', pdf_download_tip: 'PDF downloaden', pdf_open_tab: 'In nieuw tabblad openen', pdf_close: 'Sluiten',
+    pdf_fallback: 'Als de preview niet laadt:',
   },
   pt: {
     title: 'truu success', subtitle: 'Calculadora de ganhos',
@@ -255,6 +279,9 @@ const TRANSLATIONS = {
     tip_world: 'Pro rata do pool global, a partir de 12 pontos/mês.',
     disclaimer: 'Cálculo exemplo. Sem garantia. Plano 04/2026.',
     contact: 'Torne-se truu hero',
+    pdf_btn: '📖 PDF do plano', pdf_title: 'truu success plan — Brochura completa',
+    pdf_download: 'Baixar', pdf_download_tip: 'Baixar PDF', pdf_open_tab: 'Abrir em nova aba', pdf_close: 'Fechar',
+    pdf_fallback: 'Se a visualização não carregar:',
   },
   ru: {
     title: 'truu success', subtitle: 'Калькулятор дохода',
@@ -281,6 +308,9 @@ const TRANSLATIONS = {
     tip_world: 'Пропорционально из глобального пула, от 12 баллов/мес.',
     disclaimer: 'Пример расчёта. Без гарантии дохода. План 04/2026.',
     contact: 'Стать truu hero',
+    pdf_btn: '📖 PDF плана', pdf_title: 'truu success plan — Полная брошюра',
+    pdf_download: 'Скачать', pdf_download_tip: 'Скачать PDF', pdf_open_tab: 'Открыть в новой вкладке', pdf_close: 'Закрыть',
+    pdf_fallback: 'Если предпросмотр не загружается:',
   },
   bar: {
     /* Bayerisch — herzhaft, mit Schmäh */
@@ -308,6 +338,9 @@ const TRANSLATIONS = {
     tip_world: 'Anteilig aus n weltweitn Pool, ab 12 Punkt/Monat.',
     disclaimer: 'Beispül-Rechnung. Koa Garantie. Plan 04/2026.',
     contact: 'Werd a truu hero',
+    pdf_btn: '📖 Plan-PDF', pdf_title: 'truu success plan — De ganze Broschüre',
+    pdf_download: 'Owie loadn', pdf_download_tip: 'PDF owie loadn', pdf_open_tab: 'Im neia Tab aufmacha', pdf_close: 'Zua',
+    pdf_fallback: 'Wenn d Vorschau ned lod:',
   },
 }
 

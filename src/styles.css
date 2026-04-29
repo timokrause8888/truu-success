@@ -420,6 +420,108 @@ body {
 }
 .cta:hover { filter: brightness(1.05); transform: translateY(-1px); }
 
+.footer-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.cta-secondary {
+  background: #fff;
+  color: var(--gold-3);
+  border: 2px solid var(--gold-2);
+  box-shadow: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cta-secondary:hover {
+  background: var(--cream-3);
+  filter: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.18);
+}
+
+/* ─── PDF-Viewer-Modal ─────────────────────────────────────────────
+   Vollbild-Modal mit der Original-Broschüre als PDF. Native Browser-
+   Anzeige via <iframe>. Plus Header mit Download- und Open-In-New-Tab-
+   Knöpfen, da iOS Safari iframes mit PDFs nicht zuverlässig rendert. */
+.pdf-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  display: flex; align-items: stretch; justify-content: center;
+  animation: pdfFadeIn 0.18s ease;
+  padding: 16px;
+}
+@keyframes pdfFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.pdf-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%; max-width: 1080px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+}
+.pdf-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 18px;
+  background: linear-gradient(135deg, var(--gold-2), var(--gold-3));
+  color: #fff; flex-wrap: wrap;
+}
+.pdf-modal-title {
+  font-size: 15px; font-weight: 700;
+}
+.pdf-modal-actions {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+}
+.pdf-btn {
+  padding: 7px 14px;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer; transition: all 0.15s;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+}
+.pdf-btn:hover {
+  background: rgba(255,255,255,0.25);
+  border-color: #fff;
+}
+.pdf-btn-primary {
+  background: #fff;
+  color: var(--gold-3);
+  border-color: #fff;
+}
+.pdf-btn-primary:hover {
+  background: var(--cream-3);
+  filter: brightness(1.02);
+}
+.pdf-btn-close {
+  font-size: 16px; padding: 5px 12px;
+}
+.pdf-modal-iframe {
+  flex: 1; min-height: 0;
+  width: 100%;
+  border: none;
+  background: #f5f5f5;
+}
+.pdf-modal-fallback {
+  padding: 8px 14px;
+  font-size: 12px; color: var(--ink-3);
+  background: var(--cream);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+.pdf-modal-fallback a { color: var(--gold-3); font-weight: 600; }
+
+@media (max-width: 700px) {
+  .pdf-modal-backdrop { padding: 0; }
+  .pdf-modal { border-radius: 0; }
+  .pdf-modal-title { font-size: 13px; }
+  .pdf-btn { font-size: 12px; padding: 6px 10px; }
+}
+
 /* ─── Mobile-Layout ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .main-grid { grid-template-columns: 1fr; }
