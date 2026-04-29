@@ -188,7 +188,7 @@ export default function App() {
               <button
                 className={`sale-pill all ${activeSale > totalSales ? 'active' : ''}`}
                 onClick={() => setActiveSale(totalSales + 1)}
-              >{t('show_all', locale)}</button>
+              >{t('show_all', locale, { n: totalSales })}</button>
             </div>
             <button
               className="sale-nav-btn primary"

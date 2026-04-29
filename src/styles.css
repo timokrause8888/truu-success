@@ -307,7 +307,24 @@ body {
   filter: brightness(1.05); box-shadow: 0 3px 10px rgba(154, 111, 0, 0.4);
 }
 .sale-nav-btn:disabled {
-  opacity: 0.4; cursor: not-allowed;
+  cursor: not-allowed;
+  background: #f3f0e8;
+  color: #b8b4a8;
+  border: 1.5px solid #e6e1d4;
+  box-shadow: none;
+  filter: none;
+}
+/* Primary-Variante explizit: gleiche dezente Disabled-Optik */
+.sale-nav-btn.primary:disabled {
+  background: #f3f0e8;
+  color: #b8b4a8;
+  border: 1.5px solid #e6e1d4;
+  box-shadow: none;
+  filter: none;
+}
+.sale-nav-btn.primary:disabled:hover {
+  filter: none;
+  box-shadow: none;
 }
 .sale-nav-pills {
   display: flex; gap: 5px; flex: 1; justify-content: center;
