@@ -55,6 +55,10 @@ function loadStored() {
 function fmtEUR(n, currency = '€') {
   return Math.round(n).toLocaleString('de-DE') + ' ' + currency
 }
+// Reine Zahl ohne Währung — mit deutschen Tausender-Punkten
+function fmtNum(n) {
+  return (Math.round(n) || 0).toLocaleString('de-DE')
+}
 
 export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) {
   const [matrix, setMatrix] = useState(loadStored)
@@ -205,9 +209,9 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
                       </>
                     )
                   })}
-                  <td className="t-calc sticky col-c1">{r.expertsTotal || 0}</td>
-                  <td className="t-calc sticky col-c2">{r.monthlySales || 0}</td>
-                  <td className="t-calc sticky col-c3">{r.yearlySales || 0}</td>
+                  <td className="t-calc sticky col-c1">{fmtNum(r.expertsTotal)}</td>
+                  <td className="t-calc sticky col-c2">{fmtNum(r.monthlySales)}</td>
+                  <td className="t-calc sticky col-c3">{fmtNum(r.yearlySales)}</td>
                   <td className="t-calc gold sticky col-c4">{fmtEUR(r.monthlyDiff || 0, currency)}</td>
                   <td className="t-calc gold sticky col-c5">{fmtEUR(r.yearlyDiff || 0, currency)}</td>
                 </tr>
@@ -222,7 +226,7 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
               </>))}
               <td className="t-calc sticky col-c1"></td>
               <td className="t-calc sticky col-c2"></td>
-              <td className="t-calc sticky col-c3">{totals.salesYearly}</td>
+              <td className="t-calc sticky col-c3">{fmtNum(totals.salesYearly)}</td>
               <td className="t-calc gold sticky col-c4">{fmtEUR(totals.diffMonthly, currency)}</td>
               <td className="t-calc gold sticky col-c5">{fmtEUR(totals.diffYearly, currency)}</td>
             </tr>
