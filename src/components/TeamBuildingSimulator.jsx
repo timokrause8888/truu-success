@@ -62,12 +62,14 @@ function fmtNum(n) {
 
 export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) {
   const [matrix, setMatrix] = useState(loadStored)
+  const [showDebug, setShowDebug] = useState(false)
   // Persistieren bei jeder Änderung
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(matrix)) } catch {}
   }, [matrix])
 
   const currency = market === 'ch' ? 'CHF' : '€'
+  const navigatorBonus = market === 'ch' ? LEVELS[0].chBonus : LEVELS[0].deBonus
 
   // ─── Kennzahlen pro Jahr ─────────────────────────────────────────────
   // WICHTIG: Mein Linie-1-Expert hat selbst eine Downline (meine L2..L10)
@@ -320,6 +322,133 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
         <strong>ℹ️ {t('team_assumptions_title', locale)}:</strong>{' '}
         {t('team_assumptions_text', locale)}
       </div>
+
+      {/* Versteckter Debug-Button — fast unsichtbar (opacity 0.06).
+         Klick blendet den kompletten Schritt-für-Schritt-Rechenweg ein,
+         damit man die Diff-Provisions-Logik nachvollziehen kann. */}
+      <div style={{ textAlign: 'center', marginTop: 24 }}>
+        <button
+          type="button"
+          onClick={() => setShowDebug(v => !v)}
+          style={{
+            opacity: showDebug ? 0.5 : 0.06,
+            background: 'transparent',
+            border: 'none',
+            color: '#666',
+            fontSize: 11,
+            cursor: 'pointer',
+            padding: '6px 12px',
+          }}
+          title="Berechnungs-Details ein-/ausblenden"
+        >{showDebug ? '▲ Rechenweg ausblenden' : '▽ debug'}</button>
+      </div>
+
+      {showDebug && (
+        <DebugTrace
+          matrix={matrix}
+          perYear={perYear}
+          market={market}
+          currency={currency}
+          navigatorBonus={navigatorBonus}
+        />
+      )}
     </div>
   )
 }
+
+// ───────── Debug-Trace: Schritt-für-Schritt der Berechnung ─────────
+// Zeigt für JEDES Jahr alle Zwischenwerte: Eingaben → kumulierte Punkte
+// → MEIN Level + Tarif → L1-Anzahl + per-L1-Punkte → L1-Level + Tarif
+// → Differenz pro Verkauf → Monatliches/Jährliches Total.
+//
+// So kann der User-/Tester nachvollziehen, ob die Stufengleichheit
+// korrekt erkannt wird (L1=ME → diff=0) und wo Übergänge passieren.
+function DebugTrace({ matrix, perYear, market, currency, navigatorBonus }) {
+  const navBonus = navigatorBonus
+  return (
+    <div style={{
+      marginTop: 18, padding: 16,
+      background: '#fffbe6', border: '1.5px solid #f0d57a',
+      borderRadius: 10, fontFamily: 'ui-monospace, Menlo, monospace',
+      fontSize: 12, color: '#3a2900',
+      overflowX: 'auto',
+    }}>
+      <div style={{ fontWeight: 700, marginBottom: 10, fontFamily: 'inherit', fontSize: 14 }}>
+        🔬 Berechnungs-Detail (Schritt für Schritt pro Jahr)
+      </div>
+      <div style={{ marginBottom: 12, fontFamily: 'system-ui, sans-serif', fontSize: 12 }}>
+        Markt: <strong>{market.toUpperCase()}</strong> · navigator-Tarif: <strong>{navBonus} {currency}</strong> ·
+        Diff-Formel: <code>max(0, MeinTarif − L1Tarif) × MonatsVerkäufe</code>
+      </div>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1200 }}>
+        <thead>
+          <tr style={{ background: '#f0d57a44' }}>
+            <th style={th}>Jahr</th>
+            <th style={th}>Linien-Eingabe<br/>(Experts × Sales)</th>
+            <th style={th}>Σ Experts</th>
+            <th style={th}>Sales/Mon</th>
+            <th style={th}>Sales/Jahr</th>
+            <th style={th}>kumul. Team-Punkte</th>
+            <th style={th}>MEIN Level</th>
+            <th style={th}>MEIN Tarif</th>
+            <th style={th}>L1 Anzahl</th>
+            <th style={th}>per-L1<br/>Punkte</th>
+            <th style={th}>L1 Level</th>
+            <th style={th}>L1 Tarif</th>
+            <th style={th}>Diff/Verkauf</th>
+            <th style={th}>Diff/Monat</th>
+            <th style={th}>Diff/Jahr</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.keys(perYear).map(yKey => {
+            const y = Number(yKey)
+            const r = perYear[y]
+            const lines = matrix[y] || {}
+            const lineCells = Object.entries(lines)
+              .filter(([_, c]) => (Number(c.experts) || 0) > 0 || (Number(c.sales) || 0) > 0)
+              .map(([l, c]) => `L${l}: ${c.experts || 0}×${c.sales || 0}`)
+              .join(', ') || '—'
+            const myBonus = market === 'ch' ? r.myLevel?.chBonus : r.myLevel?.deBonus
+            const l1Bonus = market === 'ch' ? r.l1Level?.chBonus : r.l1Level?.deBonus
+            const l1Count = Number(lines[1]?.experts) || 0
+            const perL1 = l1Count > 0 ? r.cumulPoints / l1Count : 0
+            const isStufengleich = l1Count === 1 && r.cumulPoints > 0
+            return (
+              <tr key={y} style={{ borderTop: '1px solid #e0c060' }}>
+                <td style={td}><strong>{y}</strong></td>
+                <td style={{ ...td, fontSize: 11 }}>{lineCells}</td>
+                <td style={td}>{r.expertsTotal || 0}</td>
+                <td style={td}>{r.monthlySales || 0}</td>
+                <td style={td}>{r.yearlySales || 0}</td>
+                <td style={td}>{Math.round(r.cumulPoints || 0)}</td>
+                <td style={{ ...td, fontWeight: 700 }}>{r.myLevel?.label || '—'}</td>
+                <td style={td}>{myBonus} {currency}</td>
+                <td style={{ ...td, color: l1Count === 0 ? '#bbb' : (l1Count === 1 ? '#c00' : '#080') }}>
+                  {l1Count}{isStufengleich && ' ⚠'}
+                </td>
+                <td style={td}>{Math.round(perL1)}</td>
+                <td style={{ ...td, fontWeight: 700 }}>{r.l1Level?.label || '—'}</td>
+                <td style={td}>{l1Bonus} {currency}</td>
+                <td style={{ ...td, color: r.diffPerSale > 0 ? '#080' : '#c00', fontWeight: 700 }}>
+                  {myBonus} − {l1Bonus} = <strong>{r.diffPerSale}</strong> {currency}
+                </td>
+                <td style={td}>{Math.round(r.monthlyDiff || 0).toLocaleString('de-DE')} {currency}</td>
+                <td style={td}>{Math.round(r.yearlyDiff || 0).toLocaleString('de-DE')} {currency}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.6, color: '#7a5d00', fontFamily: 'system-ui, sans-serif' }}>
+        <strong>⚠ Stufengleichheit-Hinweis:</strong> Bei <code>L1 Anzahl = 1</code> hat der einzige L1-Expert
+        per Definition genau MEINE Punkte (alles, was unter mir liegt, ist auch unter ihm) → gleiches Level
+        → Diff = 0. So funktioniert das Roll-Up im MLM. Beobachte vor allem den Wechsel von 1 → 2 L1-Experten:
+        plötzlich halbieren sich die per-L1-Punkte, L1 fällt auf eine niedrigere Stufe, MEIN Diff wird größer.
+      </div>
+    </div>
+  )
+}
+
+const th = { padding: '6px 8px', textAlign: 'left', fontWeight: 600, fontSize: 11, fontFamily: 'system-ui, sans-serif' }
+const td = { padding: '6px 8px', whiteSpace: 'nowrap' }
