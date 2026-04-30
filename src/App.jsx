@@ -7,6 +7,7 @@ import EarningsPanel from './components/EarningsPanel'
 import BoosterPanel from './components/BoosterPanel'
 import HeroesLogo from './components/HeroesLogo'
 import PlanPdfViewer from './components/PlanPdfViewer'
+import TeamBuildingSimulator from './components/TeamBuildingSimulator'
 
 /* eslint-disable no-undef */
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'local'
@@ -141,15 +142,8 @@ export default function App() {
       </div>
 
       {mode === 'team' && (
-        <main className="team-coming-soon">
-          <div className="team-coming-card">
-            <div className="team-coming-icon">👥</div>
-            <h2>{t('team_soon_title', locale)}</h2>
-            <p>{t('team_soon_text', locale)}</p>
-            <button className="cta cta-secondary" onClick={() => setMode('eigen')}>
-              ← {t('mode_eigen', locale)}
-            </button>
-          </div>
+        <main className="team-sim-wrap">
+          <TeamBuildingSimulator locale={locale} market={market} />
         </main>
       )}
 
