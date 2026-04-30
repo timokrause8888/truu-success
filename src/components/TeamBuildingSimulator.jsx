@@ -146,11 +146,26 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
               {LINES.map(l => (
                 <th key={l} colSpan={2} className="t-line-h">{t('team_line', locale)} {l}</th>
               ))}
-              <th rowSpan={2} className="t-calc-h">{t('team_experts_total', locale)}</th>
-              <th rowSpan={2} className="t-calc-h">{t('team_sales_month', locale)}</th>
-              <th rowSpan={2} className="t-calc-h">{t('team_sales_year', locale)}</th>
-              <th rowSpan={2} className="t-calc-h gold">{t('team_diff_month', locale)}</th>
-              <th rowSpan={2} className="t-calc-h gold">{t('team_diff_year', locale)}</th>
+              <th rowSpan={2} className="t-calc-h sticky col-c1">
+                <span className="t-h-top">{t('team_experts_total_top', locale)}</span>
+                <span className="t-h-bot">{t('team_experts_total_bot', locale)}</span>
+              </th>
+              <th rowSpan={2} className="t-calc-h sticky col-c2">
+                <span className="t-h-top">{t('team_sales_month_top', locale)}</span>
+                <span className="t-h-bot">{t('team_sales_month_bot', locale)}</span>
+              </th>
+              <th rowSpan={2} className="t-calc-h sticky col-c3">
+                <span className="t-h-top">{t('team_sales_year_top', locale)}</span>
+                <span className="t-h-bot">{t('team_sales_year_bot', locale)}</span>
+              </th>
+              <th rowSpan={2} className="t-calc-h gold sticky col-c4">
+                <span className="t-h-top">{t('team_diff_month_top', locale)}</span>
+                <span className="t-h-bot">{t('team_diff_month_bot', locale)}</span>
+              </th>
+              <th rowSpan={2} className="t-calc-h gold sticky col-c5">
+                <span className="t-h-top">{t('team_diff_year_top', locale)}</span>
+                <span className="t-h-bot">{t('team_diff_year_bot', locale)}</span>
+              </th>
             </tr>
             <tr>
               {LINES.map(l => (
@@ -190,11 +205,11 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
                       </>
                     )
                   })}
-                  <td className="t-calc">{r.expertsTotal || 0}</td>
-                  <td className="t-calc">{r.monthlySales || 0}</td>
-                  <td className="t-calc">{r.yearlySales || 0}</td>
-                  <td className="t-calc gold">{fmtEUR(r.monthlyDiff || 0, currency)}</td>
-                  <td className="t-calc gold">{fmtEUR(r.yearlyDiff || 0, currency)}</td>
+                  <td className="t-calc sticky col-c1">{r.expertsTotal || 0}</td>
+                  <td className="t-calc sticky col-c2">{r.monthlySales || 0}</td>
+                  <td className="t-calc sticky col-c3">{r.yearlySales || 0}</td>
+                  <td className="t-calc gold sticky col-c4">{fmtEUR(r.monthlyDiff || 0, currency)}</td>
+                  <td className="t-calc gold sticky col-c5">{fmtEUR(r.yearlyDiff || 0, currency)}</td>
                 </tr>
               )
             })}
@@ -205,11 +220,11 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
                 <td key={`te-${l}`} />
                 <td key={`ts-${l}`} />
               </>))}
-              <td className="t-calc"></td>
-              <td className="t-calc"></td>
-              <td className="t-calc">{totals.salesYearly}</td>
-              <td className="t-calc gold">{fmtEUR(totals.diffMonthly, currency)}</td>
-              <td className="t-calc gold">{fmtEUR(totals.diffYearly, currency)}</td>
+              <td className="t-calc sticky col-c1"></td>
+              <td className="t-calc sticky col-c2"></td>
+              <td className="t-calc sticky col-c3">{totals.salesYearly}</td>
+              <td className="t-calc gold sticky col-c4">{fmtEUR(totals.diffMonthly, currency)}</td>
+              <td className="t-calc gold sticky col-c5">{fmtEUR(totals.diffYearly, currency)}</td>
             </tr>
           </tbody>
         </table>

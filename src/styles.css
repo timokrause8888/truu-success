@@ -758,3 +758,68 @@ body {
   border-radius: 6px;
   font-size: 12px; color: #6b5a30; line-height: 1.5;
 }
+
+/* ───── Sticky-Auswertungs-Spalten + 2-zeilige Header ───── */
+/* 5 Spalten am rechten Rand, von rechts nach links:
+   col-c5 (Diff/Jahr)     → right: 0
+   col-c4 (Diff/Monat)    → right: 88px
+   col-c3 (Verkäufe/Jahr) → right: 176px
+   col-c2 (Verkäufe/Monat)→ right: 264px
+   col-c1 (Experts gesamt)→ right: 352px
+   Jede Spalte ist 88px breit. */
+.team-sim-table th.sticky,
+.team-sim-table td.sticky {
+  position: sticky;
+  width: 88px; min-width: 88px; max-width: 88px;
+  /* Linker Border als Schatten-Trenner — markiert den Sticky-Bereich */
+}
+.team-sim-table .col-c1 { right: 352px; }
+.team-sim-table .col-c2 { right: 264px; }
+.team-sim-table .col-c3 { right: 176px; }
+.team-sim-table .col-c4 { right:  88px; }
+.team-sim-table .col-c5 { right:   0px; }
+
+/* Header-Zeilen müssen über den Body-Zellen liegen */
+.team-sim-table thead th.sticky { z-index: 4; }
+.team-sim-table tbody td.sticky { z-index: 2; }
+
+/* Schmaler Schatten links neben der ersten Sticky-Spalte → klare Trennung
+   vom scrollbaren Linien-Bereich */
+.team-sim-table .col-c1 {
+  box-shadow: -4px 0 6px -3px rgba(0,0,0,0.12);
+}
+
+/* 2-zeilige Header: oben dünn, unten fett. Reduziert Spaltenbreite massiv. */
+.team-sim-table th.t-calc-h .t-h-top,
+.team-sim-table th.t-calc-h .t-h-bot {
+  display: block;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.team-sim-table th.t-calc-h .t-h-top {
+  font-weight: 300;
+  font-size: 11px;
+  color: #6b5a30;
+  letter-spacing: 0.2px;
+}
+.team-sim-table th.t-calc-h .t-h-bot {
+  font-weight: 800;
+  font-size: 12px;
+  color: #4a3a10;
+  margin-top: 1px;
+}
+.team-sim-table th.t-calc-h.gold .t-h-top { color: #fff5c8; font-weight: 300; }
+.team-sim-table th.t-calc-h.gold .t-h-bot { color: #fff;    font-weight: 800; }
+
+/* Year-Spalte links sticky (nice-to-have, damit man die Jahr-Nr immer sieht) */
+.team-sim-table .t-year-h,
+.team-sim-table .t-year {
+  position: sticky; left: 0;
+}
+.team-sim-table thead .t-year-h { z-index: 5; }
+.team-sim-table tbody .t-year   { z-index: 3; }
+/* Schatten rechts neben Year-Spalte */
+.team-sim-table .t-year-h,
+.team-sim-table .t-year {
+  box-shadow: 4px 0 6px -3px rgba(0,0,0,0.08);
+}
