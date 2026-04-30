@@ -822,3 +822,10 @@ body {
 .team-sim-table .t-year {
   box-shadow: 4px 0 6px -3px rgba(0,0,0,0.08);
 }
+
+/* L1-Level-Anzeige in der Karriere-Verlauf-Pille */
+.team-sim-level-pill .t-l1 {
+  font-size: 10px; color: #9a6f00; font-weight: 600;
+  margin: 1px 0;
+  font-style: italic;
+}

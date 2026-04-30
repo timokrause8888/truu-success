@@ -67,10 +67,22 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(matrix)) } catch {}
   }, [matrix])
 
-  const navigatorBonus = market === 'ch' ? LEVELS[0].chBonus : LEVELS[0].deBonus
   const currency = market === 'ch' ? 'CHF' : '€'
 
-  // Kennzahlen pro Jahr
+  // ─── Kennzahlen pro Jahr ─────────────────────────────────────────────
+  // WICHTIG: Mein Linie-1-Expert hat selbst eine Downline (meine L2..L10)
+  // und macht eigene Verkäufe (meine Linie 1). Er sammelt also Punkte und
+  // steigt im Karriere-Level mit auf. Meine Differenz-Provision pro Verkauf
+  // ist daher MEIN Tarif minus dem Tarif meines L1-Experts (nicht minus
+  // navigator). Aufgrund des Roll-Up-Prinzips (siehe successPlan.js,
+  // commissionLines) zahlt jeder Verkauf in irgendeiner Linie nur die
+  // höchste-bereits-gezahlte-Stufe darunter heraus — und das ist immer
+  // L1, weil L1 mehr Team hat als L2, L2 mehr als L3 usw.
+  //
+  // Modellierung: Per L1-Expert-Punkte = (kumulierte Team-Sales) /
+  // (aktuelle L1-Anzahl). Bei genau 1 L1-Expert hat dieser exakt MEINE
+  // Punkte → gleiche Stufe → Differenz = 0 (matches MLM-Realität:
+  // 'wer nur in die Tiefe baut, verdient an der Tiefe nichts mehr').
   const perYear = useMemo(() => {
     const out = {}
     let cumulPoints = 0
@@ -86,21 +98,32 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
         monthlySales += e * s   // pro Monat
       }
       const yearlySales = monthlySales * 12
-      // success-Punkte = Verkäufe (1 Punkt pro Verkauf, vereinfachte Annahme)
       cumulPoints += yearlySales
+
+      // Mein eigenes Level (alle Team-Sales kumuliert)
       const myLevel = levelForPoints(cumulPoints)
       const myBonus = market === 'ch' ? myLevel.chBonus : myLevel.deBonus
-      const diffPerSale = Math.max(0, myBonus - navigatorBonus)
+
+      // Linie-1-Expert Level (Punkte / aktuelle L1-Anzahl)
+      const l1Count = Number(lines[1]?.experts) || 0
+      const perL1Points = l1Count > 0 ? cumulPoints / l1Count : 0
+      const l1Level = l1Count > 0 ? levelForPoints(perL1Points) : LEVELS[0]
+      const l1Bonus = market === 'ch' ? l1Level.chBonus : l1Level.deBonus
+
+      // Differenz pro Verkauf — meine Stufe minus L1-Stufe.
+      // Roll-Up: alle Verkäufe in beliebiger Linie zahlen mir genau diese
+      // Differenz (L1 ist immer Upline mit höchstem Niveau unter mir).
+      const diffPerSale = Math.max(0, myBonus - l1Bonus)
       const monthlyDiff = monthlySales * diffPerSale
       const yearlyDiff = yearlySales * diffPerSale
 
       out[y] = {
         expertsTotal, monthlySales, yearlySales,
-        myLevel, diffPerSale, monthlyDiff, yearlyDiff, cumulPoints,
+        myLevel, l1Level, diffPerSale, monthlyDiff, yearlyDiff, cumulPoints,
       }
     }
     return out
-  }, [matrix, market, navigatorBonus])
+  }, [matrix, market])
 
   // Gesamt-Summen über 10 Jahre
   const totals = useMemo(() => {
@@ -284,6 +307,7 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
               <div key={y} className="team-sim-level-pill">
                 <span className="t-yr">{t('team_year', locale)} {y}</span>
                 <strong>{r.myLevel?.label || '—'}</strong>
+                <span className="t-l1">L1: {r.l1Level?.label || '—'}</span>
                 <span className="t-diff">+{fmtEUR(r.diffPerSale || 0, currency)} / {t('team_per_sale', locale)}</span>
               </div>
             )
