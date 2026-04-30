@@ -92,7 +92,9 @@ export default function App() {
         </button>
       </div>
 
-      {/* Setup-Bar: Markt + Karrierestatus + Trennstrich + Stilauswahl + JETZT */}
+      {/* Setup-Bar: Markt + Karrierestatus + Trennstrich + Stilauswahl + JETZT.
+         Nur im Eigenumsatz-Modus relevant — Teamaufbau hat eigene Eingabe-Ansicht. */}
+      {mode === 'eigen' && (
       <div className="setup-bar">
         <label>
           <span className="setup-label">{t('market', locale)}</span>
@@ -140,6 +142,7 @@ export default function App() {
           {levelChanged && <span className="level-up">↑ aufgestiegen</span>}
         </div>
       </div>
+      )}
 
       {mode === 'team' && (
         <main className="team-sim-wrap">

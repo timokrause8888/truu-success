@@ -130,6 +130,40 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
     setMatrix(emptyMatrix())
   }
 
+  // Spreadsheet-style Tastatur-Navigation. Werte werden bei jedem
+  // Tastendruck via onChange gespeichert (state → localStorage), die
+  // Pfeil-/Enter-Tasten verschieben nur den Fokus.
+  function onCellKeyDown(e) {
+    const k = e.key
+    const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter']
+    if (!navKeys.includes(k)) return
+    // Bei Pfeil hoch/runter in einem Number-Input würde der Browser sonst
+    // den Wert um 1 erhöhen/verringern — das ist hier nicht gewollt.
+    e.preventDefault()
+    const row = Number(e.currentTarget.dataset.row)
+    const col = Number(e.currentTarget.dataset.col)
+    let nextRow = row, nextCol = col
+    if (k === 'ArrowRight') {
+      nextCol = col + 1
+      if (nextCol > 19) { nextCol = 0; nextRow = row + 1 }
+    } else if (k === 'ArrowLeft') {
+      nextCol = col - 1
+      if (nextCol < 0) { nextCol = 19; nextRow = row - 1 }
+    } else if (k === 'ArrowDown' || k === 'Enter') {
+      nextRow = row + 1
+    } else if (k === 'ArrowUp') {
+      nextRow = row - 1
+    }
+    if (nextRow < 1 || nextRow > 10) return
+    const next = document.querySelector(
+      `input[data-row="${nextRow}"][data-col="${nextCol}"]`
+    )
+    if (next) {
+      next.focus()
+      next.select?.()
+    }
+  }
+
   return (
     <div className="team-sim">
       {/* Header mit Reset + Hinweis */}
@@ -193,16 +227,22 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
                         <td key={`e-${y}-${l}`} className="t-input">
                           <input
                             type="number" min={0} step={1}
+                            data-row={y}
+                            data-col={(l - 1) * 2}
                             value={cell.experts || ''}
                             onChange={e => updateCell(y, l, 'experts', e.target.value)}
+                            onKeyDown={onCellKeyDown}
                             placeholder="–"
                           />
                         </td>
                         <td key={`s-${y}-${l}`} className="t-input">
                           <input
                             type="number" min={0} step={1}
+                            data-row={y}
+                            data-col={(l - 1) * 2 + 1}
                             value={cell.sales || ''}
                             onChange={e => updateCell(y, l, 'sales', e.target.value)}
+                            onKeyDown={onCellKeyDown}
                             placeholder="–"
                           />
                         </td>

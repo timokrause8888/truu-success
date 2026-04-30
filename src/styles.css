@@ -642,9 +642,8 @@ body {
 
 /* ───── Team Building Simulator ───── */
 .team-sim-wrap {
-  margin: 12px auto 32px;
-  padding: 0 16px;
-  max-width: 1500px;
+  margin: 12px 0 32px;
+  width: 100%;
 }
 .team-sim {
   background: var(--bg-card, #fff);
