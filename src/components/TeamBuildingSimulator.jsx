@@ -96,50 +96,113 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
   // Stufensprünge werden pro Monat erkannt und in der Debug-Tabelle
   // hervorgehoben. So sieht man genau wann L1 vs. ich aufsteigt.
   const monthlyTrace = useMemo(() => {
-    const months = []
-    let myCumul = 0           // ALLE Sales aus allen Linien
-    let l1Cumul = 0           // PRO L1-Expert: sein Anteil an ALLEN Team-Sales
-                              // (eigene + komplette Downline L2..L10)
-    let prevMyKey = null
-    let prevL1Key = null
+    // Jeder Eintrag = eine ZEILE in der Detail-Tabelle. Es gibt drei
+    // Zeilen-Typen:
+    //   • 'init'        — initialer Stand am Anfang von Jahr 1 (Recruitment-
+    //                     Sales: für jeden L1-Expert zählt der Verkauf an ihn
+    //                     selbst als 1; für jeden L2-Expert zählt analog
+    //                     proportional zu L1).
+    //   • 'recruitNew'  — Beginn eines neuen Jahres mit zusätzlichem L1/L2-
+    //                     Expert (jeder neue Expert = +1 Recruitment-Sale).
+    //   • 'jump'        — Stufensprung MEIN und/oder L1 mid-month nach Sale s.
+    //   • 'monthEnd'    — End-of-Month-Zeile mit kumuliertem Monats-Diff.
+    const events = []
+    let myCumul = 0
+    let l1Cumul = 0
+    let prevMyLevel = LEVELS[0]
+    let prevL1Level = LEVELS[0]
+    let prevL1Count = 0
+    let prevL2Count = 0
+    let stepCounters = {} // pro Jahr ein laufender Step-Counter
+    function nextStep(y) {
+      stepCounters[y] = (stepCounters[y] || 0) + 1
+      return stepCounters[y]
+    }
+    function snapshot() {
+      const myLevel = levelForPoints(myCumul)
+      const l1Level = levelForPoints(l1Cumul)
+      const myBonus = market === 'ch' ? myLevel.chBonus : myLevel.deBonus
+      const l1Bonus = market === 'ch' ? l1Level.chBonus : l1Level.deBonus
+      return { myLevel, l1Level, myBonus, l1Bonus, diffPerSale: Math.max(0, myBonus - l1Bonus) }
+    }
     for (const y of YEARS) {
       const lines = matrix[y] || {}
       const l1Count = Number(lines[1]?.experts) || 0
+      const l2Count = Number(lines[2]?.experts) || 0
       let monthlyTotalSales = 0
-      let monthlyL1Sales = 0
       for (const l of LINES) {
         const c = lines[l] || {}
         const sales = (Number(c.experts) || 0) * (Number(c.sales) || 0)
         monthlyTotalSales += sales
-        if (l === 1) monthlyL1Sales = sales
       }
-      // Pro L1-Expert sieht: monatliche Total-Sales / L1-Anzahl. Bei 1 L1
-      // hat dieser eine genau MEINE Punkte → gleiche Stufe → Diff = 0.
       const monthlyPerL1 = l1Count > 0 ? monthlyTotalSales / l1Count : 0
-      for (let m = 1; m <= 12; m++) {
-        myCumul += monthlyTotalSales
-        if (l1Count > 0) l1Cumul += monthlyPerL1
-        const myLevel = levelForPoints(myCumul)
-        const l1Level = l1Count > 0 ? levelForPoints(l1Cumul) : LEVELS[0]
-        const myBonus = market === 'ch' ? myLevel.chBonus : myLevel.deBonus
-        const l1Bonus = market === 'ch' ? l1Level.chBonus : l1Level.deBonus
-        const diffPerSale = Math.max(0, myBonus - l1Bonus)
-        const monthlyDiff = monthlyTotalSales * diffPerSale
-        const myJump = prevMyKey !== null && myLevel.key !== prevMyKey
-        const l1Jump = prevL1Key !== null && l1Level.key !== prevL1Key
-        months.push({
-          year: y, month: m,
-          monthlyTotalSales, monthlyL1Sales, l1Count, monthlyPerL1,
-          myCumul, l1Cumul,
-          myLevel, l1Level, myBonus, l1Bonus,
-          diffPerSale, monthlyDiff,
-          myJump, l1Jump,
+      // Recruitment-Korrektur am Jahreswechsel: jeder neue L1-Expert = +1
+      // Sale für mich (ich habe ihm das Gerät verkauft); jeder neue L2-Expert
+      // pro L1 = +1 für L1.
+      const newL1 = Math.max(0, l1Count - prevL1Count)
+      const newL2PerL1 = (l1Count > 0) ? Math.max(0, (l2Count - prevL2Count) / l1Count) : 0
+      if (newL1 > 0 || newL2PerL1 > 0) {
+        myCumul += newL1
+        l1Cumul += newL2PerL1
+        const snap = snapshot()
+        events.push({
+          year: y, step: nextStep(y),
+          kind: y === 1 ? 'init' : 'recruitNew',
+          note: y === 1
+            ? `Start: ${newL1}× Recruitment-Sale (L1) · L1 hat ${(newL2PerL1).toFixed(2)}× L2 rekrutiert`
+            : `Jahreswechsel: +${newL1}× neuer L1, +${newL2PerL1.toFixed(2)} L2/L1`,
+          monthlyTotalSales, l1Count, monthlyPerL1,
+          myCumul, l1Cumul, ...snap,
+          myJump: snap.myLevel.key !== prevMyLevel.key,
+          l1Jump: snap.l1Level.key !== prevL1Level.key,
+          monthlyDiff: 0,
         })
-        prevMyKey = myLevel.key
-        prevL1Key = l1Level.key
+        prevMyLevel = snap.myLevel
+        prevL1Level = snap.l1Level
+      }
+      prevL1Count = l1Count
+      prevL2Count = l2Count
+
+      for (let m = 1; m <= 12; m++) {
+        // Sale-by-Sale-Simulation. Jeder Sale: myCumul +=1, l1Cumul +=1/l1Count.
+        // Nach jedem Sale prüfen wir, ob jemand die Stufe gesprungen ist.
+        const intSales = Math.round(monthlyTotalSales)
+        const l1Step = (l1Count > 0) ? 1 / l1Count : 0
+        let monthDiffSum = 0
+        for (let s = 1; s <= intSales; s++) {
+          myCumul += 1
+          if (l1Count > 0) l1Cumul += l1Step
+          const snap = snapshot()
+          monthDiffSum += snap.diffPerSale  // exakter Monatsdiff: je Sale der Tarif zum Sale-Zeitpunkt
+          const myJump = snap.myLevel.key !== prevMyLevel.key
+          const l1Jump = snap.l1Level.key !== prevL1Level.key
+          if (myJump || l1Jump) {
+            events.push({
+              year: y, month: m, sale: s, step: nextStep(y),
+              kind: 'jump',
+              note: `Sale ${s}: ${myJump ? `MEIN ⬆ ${snap.myLevel.label}` : ''}${myJump && l1Jump ? ' · ' : ''}${l1Jump ? `L1 ⬆ ${snap.l1Level.label}` : ''}`,
+              monthlyTotalSales, l1Count, monthlyPerL1,
+              myCumul, l1Cumul, ...snap,
+              myJump, l1Jump, monthlyDiff: 0,
+            })
+            prevMyLevel = snap.myLevel
+            prevL1Level = snap.l1Level
+          }
+        }
+        // End-of-Month-Zeile
+        const snap = snapshot()
+        events.push({
+          year: y, month: m, step: nextStep(y),
+          kind: 'monthEnd',
+          note: `Monat ${m} Ende`,
+          monthlyTotalSales, l1Count, monthlyPerL1,
+          myCumul, l1Cumul, ...snap,
+          myJump: false, l1Jump: false,
+          monthlyDiff: monthDiffSum,
+        })
       }
     }
-    return months
+    return events
   }, [matrix, market])
 
   // Aggregat pro Jahr — für die Haupt-Tabelle. Summiert die 12 Monate eines
@@ -147,7 +210,7 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
   const perYear = useMemo(() => {
     const out = {}
     for (const y of YEARS) {
-      const monthsOfY = monthlyTrace.filter(m => m.year === y)
+      const monthsOfY = monthlyTrace.filter(m => m.year === y && m.kind === 'monthEnd')
       if (!monthsOfY.length) continue
       const last = monthsOfY[monthsOfY.length - 1]
       const yearlyDiff = monthsOfY.reduce((s, m) => s + m.monthlyDiff, 0)
@@ -427,7 +490,9 @@ function DebugTrace({ matrix, perYear, monthlyTrace, market, currency, navigator
       <div style={{ marginBottom: 12, fontFamily: 'system-ui, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
         Markt: <strong>{market.toUpperCase()}</strong> · navigator-Tarif: <strong>{navBonus} {currency}</strong><br/>
         <strong>L1-Modell (MLM-korrekt):</strong> Linie-1-Expert sieht <em>alle</em> monatlichen Team-Sales (eigene Linie 1 + komplette Downline L2..L10), geteilt durch L1-Anzahl. Bei 1 L1-Expert hat dieser exakt MEINE Punkte → Stufengleichheit → Diff = 0.<br/>
-        <strong>Diff-Formel:</strong> <code>max(0, MeinTarif − L1Tarif) × MonatsVerkäufe</code>
+        <strong>Recruitment-Korrektur:</strong> jeder von dir rekrutierte L1-Expert zählt direkt als 1 Sale für dich (du hast ihm das Gerät verkauft). Analog für L1 ↔ L2.<br/>
+        <strong>Sale-by-Sale-Detail:</strong> jeder Stufensprung (MEIN ⬆ und/oder L1 ⬆) bekommt eine eigene Zeile mit Schritt-Nummer (Y/SS) — voll nachvollziehbar.<br/>
+        <strong>Diff-Formel:</strong> <code>max(0, MeinTarif − L1Tarif)</code> je Sale, summiert über den Monat (Tarif zum Sale-Zeitpunkt — Stufensprünge mid-month wirken sofort).
       </div>
 
       {/* Jahres-Übersicht — Klick auf eine Zeile klappt die 12 Monate auf */}
@@ -484,13 +549,14 @@ function DebugTrace({ matrix, perYear, monthlyTrace, market, currency, navigator
       </table>
 
       <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.6, color: '#7a5d00', fontFamily: 'system-ui, sans-serif' }}>
-        💡 Klick auf eine Jahres-Zeile → 12 Monatsschritte werden ausgeklappt mit detailliertem Stand und Stufensprüngen ⬆.
+        💡 Klick auf eine Jahres-Zeile → alle Schritte (Recruitment-Start ▸ Stufensprünge ⬆ ▸ Monatsende) werden ausgeklappt. Pro Jahr fortlaufende Schritt-Nummer Y/SS.
       </div>
     </div>
   )
 }
 
-// Untertabelle: 12 Monate eines Jahres, mit Stufensprung-Markern
+// Untertabelle: alle Events eines Jahres (init / recruitNew / jump / monthEnd)
+// Jeder Event = eine Zeile. Schritt-Nummer (Y/SS) zeigt Reihenfolge im Jahr.
 function MonthDetail({ year, months, market, currency }) {
   return (
     <tr>
@@ -498,7 +564,8 @@ function MonthDetail({ year, months, market, currency }) {
         <table style={{ borderCollapse: 'collapse', width: '100%', borderLeft: '4px solid #c9a55a' }}>
           <thead>
             <tr style={{ background: '#fff5cc88', fontSize: 11 }}>
-              <th style={th}>Monat</th>
+              <th style={th}>Schritt</th>
+              <th style={th}>Ereignis</th>
               <th style={th}>Sales (Total)</th>
               <th style={th}>MEIN Stand</th>
               <th style={th}>MEIN Level</th>
@@ -512,24 +579,34 @@ function MonthDetail({ year, months, market, currency }) {
             </tr>
           </thead>
           <tbody>
-            {months.map(m => {
+            {months.map((m, idx) => {
               const myJumpStyle = m.myJump ? { background: '#dcfce788', fontWeight: 700 } : {}
               const l1JumpStyle = m.l1Jump ? { background: '#fef3c788', fontWeight: 700 } : {}
+              // Zeilenfarbe je Event-Typ
+              const rowBg =
+                m.kind === 'init'        ? '#fff7d622' :
+                m.kind === 'recruitNew'  ? '#fff7d622' :
+                m.kind === 'jump'        ? '#fef9c322' :
+                /* monthEnd */              'transparent'
+              const stepLabel = `${m.year}/${String(m.step).padStart(2,'0')}`
               return (
-                <tr key={`${m.year}-${m.month}`} style={{ borderTop: '1px solid #f0d57a' }}>
-                  <td style={td}>{m.year}/{String(m.month).padStart(2,'0')}</td>
+                <tr key={`${m.year}-${m.step}-${idx}`} style={{ borderTop: '1px solid #f0d57a', background: rowBg }}>
+                  <td style={{ ...td, fontWeight: m.kind === 'monthEnd' ? 700 : 500 }}>{stepLabel}</td>
+                  <td style={{ ...td, fontSize: 11, color: m.kind === 'jump' ? '#7a4a00' : '#555' }}>{m.note || '—'}</td>
                   <td style={td}>{m.monthlyTotalSales}</td>
                   <td style={{ ...td, ...myJumpStyle }}>{Math.round(m.myCumul)}</td>
                   <td style={{ ...td, ...myJumpStyle }}>{m.myLevel?.label || '—'}{m.myJump ? ' ⬆' : ''}</td>
                   <td style={{ ...td, ...myJumpStyle }}>{m.myBonus} {currency}</td>
-                  <td style={td}>{m.monthlyPerL1?.toFixed(2) || '—'}</td>
+                  <td style={td}>{m.monthlyPerL1?.toFixed(2) ?? '—'}</td>
                   <td style={{ ...td, ...l1JumpStyle }}>{Math.round(m.l1Cumul)}</td>
                   <td style={{ ...td, ...l1JumpStyle }}>{m.l1Level?.label || '—'}{m.l1Jump ? ' ⬆' : ''}</td>
                   <td style={{ ...td, ...l1JumpStyle }}>{m.l1Bonus} {currency}</td>
                   <td style={{ ...td, color: m.diffPerSale > 0 ? '#080' : '#999', fontWeight: 600 }}>
                     {m.myBonus} − {m.l1Bonus} = <strong>{m.diffPerSale}</strong>
                   </td>
-                  <td style={td}>{Math.round(m.monthlyDiff).toLocaleString('de-DE')} {currency}</td>
+                  <td style={{ ...td, fontWeight: m.kind === 'monthEnd' ? 700 : 400, color: m.kind === 'monthEnd' ? '#3a2900' : '#999' }}>
+                    {m.kind === 'monthEnd' ? `${Math.round(m.monthlyDiff).toLocaleString('de-DE')} ${currency}` : '—'}
+                  </td>
                 </tr>
               )
             })}
