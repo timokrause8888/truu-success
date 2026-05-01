@@ -189,10 +189,8 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
       prevCounts = counts.slice()
 
       for (let m = 1; m <= 12; m++) {
-        // Sale-by-Sale, iteriert PRO LINIE (jede Linie unabhängig).
-        // Pro Sale in Linie n: my +1, L_n (per Expert) += 1/counts[n]
-        // Diff/Sale = max(0, myBonus − L_n_bonus) ← gilt nur für SALES von Linie n
-        let monthDiffSum = 0
+        // 1) Sale-by-Sale-Simulation iteriert PRO LINIE für die Cumul-Aktualisierung
+        //    und Stufensprung-Erkennung. Pro Sale: my +1, L_n (per Expert) += 1/counts[n]
         for (let n = 0; n < 10; n++) {
           if (counts[n] <= 0 || lineSales[n] <= 0) continue
           const lineMonthlySales = Math.round(lineSales[n])
@@ -201,8 +199,6 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
             myCumul += 1
             lCumuls[n] += lStepN
             const snap = snapshot(counts)
-            // Verdienst aus diesem Sale: Diff zur L_n-Stufe (eigene Linie!)
-            monthDiffSum += snap.lInfo[n].diffPerSale
             const myJump = snap.myLevel.key !== prevMyLevel.key
             const jumpedLevels = []
             for (let k = 0; k < 10; k++) {
@@ -227,12 +223,24 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
             }
           }
         }
-        // End-of-Month
+        // 2) Monats-Verdienst MIT END-OF-MONTH-LEVELS:
+        //    Σ über alle Linien n: lineSales[n] × max(0, MeinBonus − L_n-Bonus)
+        //    → exakt: "Anzahl Verkäufe in der Linie × aktuell berechnete Diff-Provision"
         const snap = snapshot(counts)
+        let monthDiffSum = 0
+        const verdienstBreakdown = []  // für Tooltip / spätere Anzeige
+        for (let n = 0; n < 10; n++) {
+          if (counts[n] <= 0 || lineSales[n] <= 0) continue
+          const verdL = lineSales[n] * snap.lInfo[n].diffPerSale
+          monthDiffSum += verdL
+          if (verdL > 0) verdienstBreakdown.push(`L${n+1}: ${lineSales[n]}×${snap.lInfo[n].diffPerSale}=${verdL}`)
+        }
         events.push({
           year: y, month: m, step: nextStep(y),
           kind: 'monthEnd',
-          note: `Monat ${m} Ende`,
+          note: verdienstBreakdown.length
+            ? `Monat ${m} Ende · ${verdienstBreakdown.join(' + ')}`
+            : `Monat ${m} Ende`,
           counts, monthlyTotalSales, monthlyPerLn, lineSales,
           myCumul, ...snap,
           myJump: false, anyJump: false,
