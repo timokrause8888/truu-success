@@ -331,16 +331,18 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
           type="button"
           onClick={() => setShowDebug(v => !v)}
           style={{
-            opacity: showDebug ? 0.5 : 0.06,
-            background: 'transparent',
-            border: 'none',
-            color: '#666',
-            fontSize: 11,
+            opacity: showDebug ? 0.95 : 0.45,
+            background: showDebug ? '#f3f0e0' : '#fafaf6',
+            border: '1px dashed #c9a55a',
+            borderRadius: 6,
+            color: '#5a4500',
+            fontSize: 12,
+            fontWeight: 600,
             cursor: 'pointer',
-            padding: '6px 12px',
+            padding: '8px 16px',
           }}
           title="Berechnungs-Details ein-/ausblenden"
-        >{showDebug ? '▲ Rechenweg ausblenden' : '▽ debug'}</button>
+        >{showDebug ? '▲ Rechenweg ausblenden' : '▽ Debug-Rechenweg anzeigen'}</button>
       </div>
 
       {showDebug && (
