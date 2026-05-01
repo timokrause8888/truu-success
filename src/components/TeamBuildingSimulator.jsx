@@ -16,7 +16,7 @@
 // Alle Zellen sind editierbar, der State persistiert in localStorage,
 // damit man durchgespielte Szenarien beim nächsten Aufmachen wieder hat.
 
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { LEVELS, levelForPoints } from '../lib/successPlan'
 import { t } from '../lib/i18n'
 
