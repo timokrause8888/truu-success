@@ -96,108 +96,152 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
   // Stufensprünge werden pro Monat erkannt und in der Debug-Tabelle
   // hervorgehoben. So sieht man genau wann L1 vs. ich aufsteigt.
   const monthlyTrace = useMemo(() => {
-    // Jeder Eintrag = eine ZEILE in der Detail-Tabelle. Es gibt drei
-    // Zeilen-Typen:
-    //   • 'init'        — initialer Stand am Anfang von Jahr 1 (Recruitment-
-    //                     Sales: für jeden L1-Expert zählt der Verkauf an ihn
-    //                     selbst als 1; für jeden L2-Expert zählt analog
-    //                     proportional zu L1).
-    //   • 'recruitNew'  — Beginn eines neuen Jahres mit zusätzlichem L1/L2-
-    //                     Expert (jeder neue Expert = +1 Recruitment-Sale).
-    //   • 'jump'        — Stufensprung MEIN und/oder L1 mid-month nach Sale s.
-    //   • 'monthEnd'    — End-of-Month-Zeile mit kumuliertem Monats-Diff.
+    // MLM-korrekte Sale-by-Sale-Simulation für 10 Levels.
+    //
+    // PUNKT-GUTSCHRIFT-REGEL:
+    //   - Bei jedem Verkauf bekommt der VERKÄUFER +1 Punkt + alle UPLINE +1.
+    //   - Der KÄUFER bekommt KEINE Punkte für den eigenen Anlagenkauf.
+    //   - Das gilt sowohl für reguläre Verkäufe als auch für Recruitment-Sales
+    //     (= das Gerät, das ein neuer Expert kauft, um ins System zu starten).
+    //
+    // Konkret:
+    //   - Recruitment eines L1 durch mich: +1 für mich. L1 = 0.
+    //   - Recruitment eines L2 durch L1:   +1 für L1, +1 für mich. L2 = 0.
+    //   - Recruitment eines L_n durch L_{n-1}: +1 für jede Upline-Stufe.
+    //   - Reguläre Sale eines L_n: +1 für L_n + alle Upline.
+    //
+    // Per L_n-Expert (averaged):
+    //   l_n.cumul += sum(newRecruits[n+1..10]) / counts[n] beim Jahreswechsel
+    //   l_n.cumul += monthlyPerLn[n] / monthlyTotalSales je Total-Sale
+    //                 (monthlyPerLn[n] = sum_{k=n..10}(experts_k×sales_k) / counts[n])
+    //
+    // Damit kann ein User mit z.B. 6 Linien einen Stufen-Vorsprung erreichen
+    // → Diff/Sale wird positiv, Verdienst entsteht.
     const events = []
     let myCumul = 0
-    let l1Cumul = 0
+    const lCumuls = Array.from({ length: 10 }, () => 0)  // Index 0 = L1
     let prevMyLevel = LEVELS[0]
-    let prevL1Level = LEVELS[0]
-    let prevL1Count = 0
-    let prevL2Count = 0
-    let stepCounters = {} // pro Jahr ein laufender Step-Counter
+    const prevLevels = Array.from({ length: 10 }, () => LEVELS[0])
+    let prevCounts = Array.from({ length: 10 }, () => 0)
+    const stepCounters = {}
     function nextStep(y) {
       stepCounters[y] = (stepCounters[y] || 0) + 1
       return stepCounters[y]
     }
-    function snapshot() {
+    function snapshot(counts) {
       const myLevel = levelForPoints(myCumul)
-      const l1Level = levelForPoints(l1Cumul)
       const myBonus = market === 'ch' ? myLevel.chBonus : myLevel.deBonus
-      const l1Bonus = market === 'ch' ? l1Level.chBonus : l1Level.deBonus
-      return { myLevel, l1Level, myBonus, l1Bonus, diffPerSale: Math.max(0, myBonus - l1Bonus) }
+      const lInfo = lCumuls.map((cumul, idx) => {
+        const cnt = counts[idx] || 0
+        const level = (cnt > 0) ? levelForPoints(cumul) : LEVELS[0]
+        const bonus = market === 'ch' ? level.chBonus : level.deBonus
+        return {
+          cumul, count: cnt, level, bonus,
+          diffPerSale: Math.max(0, myBonus - bonus),
+        }
+      })
+      return { myLevel, myBonus, lInfo }
     }
+
     for (const y of YEARS) {
       const lines = matrix[y] || {}
-      const l1Count = Number(lines[1]?.experts) || 0
-      const l2Count = Number(lines[2]?.experts) || 0
-      let monthlyTotalSales = 0
-      for (const l of LINES) {
+      const counts = LINES.map(l => Number(lines[l]?.experts) || 0)
+      const newRecruits = counts.map((c, i) => Math.max(0, c - prevCounts[i]))
+      const totalNew = newRecruits.reduce((s, n) => s + n, 0)
+
+      // Monthly sales pro Linie und pro L_n-Expert
+      const lineSales = LINES.map(l => {
         const c = lines[l] || {}
-        const sales = (Number(c.experts) || 0) * (Number(c.sales) || 0)
-        monthlyTotalSales += sales
-      }
-      const monthlyPerL1 = l1Count > 0 ? monthlyTotalSales / l1Count : 0
-      // Recruitment-Korrektur am Jahreswechsel: jeder neue L1-Expert = +1
-      // Sale für mich (ich habe ihm das Gerät verkauft); jeder neue L2-Expert
-      // pro L1 = +1 für L1.
-      const newL1 = Math.max(0, l1Count - prevL1Count)
-      const newL2PerL1 = (l1Count > 0) ? Math.max(0, (l2Count - prevL2Count) / l1Count) : 0
-      if (newL1 > 0 || newL2PerL1 > 0) {
-        myCumul += newL1
-        l1Cumul += newL2PerL1
-        const snap = snapshot()
+        return (Number(c.experts) || 0) * (Number(c.sales) || 0)
+      })
+      const monthlyTotalSales = lineSales.reduce((s, x) => s + x, 0)
+      // monthlyPerLn[n] = sum_{k=n..9}(lineSales[k]) / counts[n]
+      const monthlyPerLn = counts.map((cnt, n) => {
+        if (cnt <= 0) return 0
+        let total = 0
+        for (let k = n; k < 10; k++) total += lineSales[k]
+        return total / cnt
+      })
+
+      // Recruitment-Korrektur am Jahreswechsel
+      if (totalNew > 0) {
+        // Für mich: alle Recruits zählen (ich bin oben in der Kette)
+        myCumul += totalNew
+        // Für L_n: Recruits in tieferen Linien (n+1..10) — pro L_n-Expert
+        for (let n = 0; n < 10; n++) {
+          const cnt = counts[n]
+          if (cnt > 0) {
+            let belowSum = 0
+            for (let k = n + 1; k < 10; k++) belowSum += newRecruits[k]
+            if (belowSum > 0) lCumuls[n] += belowSum / cnt
+          }
+        }
+        const snap = snapshot(counts)
+        const linesNote = newRecruits.map((n, i) => n > 0 ? `L${i+1}+${n}` : null).filter(Boolean).join(' · ')
         events.push({
           year: y, step: nextStep(y),
           kind: y === 1 ? 'init' : 'recruitNew',
           note: y === 1
-            ? `Start: ${newL1}× Recruitment-Sale (L1) · L1 hat ${(newL2PerL1).toFixed(2)}× L2 rekrutiert`
-            : `Jahreswechsel: +${newL1}× neuer L1, +${newL2PerL1.toFixed(2)} L2/L1`,
-          monthlyTotalSales, l1Count, monthlyPerL1,
-          myCumul, l1Cumul, ...snap,
+            ? `Start: ${totalNew} Recruits · ${linesNote}`
+            : `Jahreswechsel: ${linesNote}`,
+          counts, monthlyTotalSales, monthlyPerLn, lineSales,
+          myCumul, ...snap,
           myJump: snap.myLevel.key !== prevMyLevel.key,
-          l1Jump: snap.l1Level.key !== prevL1Level.key,
+          anyJump: snap.lInfo.some((info, i) => info.level.key !== prevLevels[i].key),
           monthlyDiff: 0,
         })
         prevMyLevel = snap.myLevel
-        prevL1Level = snap.l1Level
+        for (let n = 0; n < 10; n++) prevLevels[n] = snap.lInfo[n].level
       }
-      prevL1Count = l1Count
-      prevL2Count = l2Count
+      prevCounts = counts.slice()
 
       for (let m = 1; m <= 12; m++) {
-        // Sale-by-Sale-Simulation. Jeder Sale: myCumul +=1, l1Cumul +=1/l1Count.
-        // Nach jedem Sale prüfen wir, ob jemand die Stufe gesprungen ist.
+        // Sale-by-Sale: per Total-Sale: my +1, L_n +monthlyPerLn[n]/monthlyTotalSales
         const intSales = Math.round(monthlyTotalSales)
-        const l1Step = (l1Count > 0) ? 1 / l1Count : 0
+        const lSteps = monthlyPerLn.map(p => intSales > 0 ? p / intSales : 0)
         let monthDiffSum = 0
         for (let s = 1; s <= intSales; s++) {
           myCumul += 1
-          if (l1Count > 0) l1Cumul += l1Step
-          const snap = snapshot()
-          monthDiffSum += snap.diffPerSale  // exakter Monatsdiff: je Sale der Tarif zum Sale-Zeitpunkt
+          for (let n = 0; n < 10; n++) {
+            if (counts[n] > 0) lCumuls[n] += lSteps[n]
+          }
+          const snap = snapshot(counts)
+          // Verdienst-Monat = Diff vs L1 (bisheriges Verhalten beibehalten,
+          // weil das die typische 'next-rated above'-Differenz im Diff-MLM
+          // ist; tiefere Diffs sind in den L2..L10-Spalten als Info sichtbar)
+          monthDiffSum += snap.lInfo[0].diffPerSale
           const myJump = snap.myLevel.key !== prevMyLevel.key
-          const l1Jump = snap.l1Level.key !== prevL1Level.key
-          if (myJump || l1Jump) {
+          const jumpedLevels = []
+          for (let n = 0; n < 10; n++) {
+            if (snap.lInfo[n].level.key !== prevLevels[n].key && counts[n] > 0) {
+              jumpedLevels.push(`L${n+1} ⬆ ${snap.lInfo[n].level.label}`)
+            }
+          }
+          if (myJump || jumpedLevels.length > 0) {
+            const parts = []
+            if (myJump) parts.push(`MEIN ⬆ ${snap.myLevel.label}`)
+            parts.push(...jumpedLevels)
             events.push({
               year: y, month: m, sale: s, step: nextStep(y),
               kind: 'jump',
-              note: `Sale ${s}: ${myJump ? `MEIN ⬆ ${snap.myLevel.label}` : ''}${myJump && l1Jump ? ' · ' : ''}${l1Jump ? `L1 ⬆ ${snap.l1Level.label}` : ''}`,
-              monthlyTotalSales, l1Count, monthlyPerL1,
-              myCumul, l1Cumul, ...snap,
-              myJump, l1Jump, monthlyDiff: 0,
+              note: `Sale ${s}: ${parts.join(' · ')}`,
+              counts, monthlyTotalSales, monthlyPerLn, lineSales,
+              myCumul, ...snap,
+              myJump, anyJump: jumpedLevels.length > 0, monthlyDiff: 0,
             })
             prevMyLevel = snap.myLevel
-            prevL1Level = snap.l1Level
+            for (let n = 0; n < 10; n++) prevLevels[n] = snap.lInfo[n].level
           }
         }
-        // End-of-Month-Zeile
-        const snap = snapshot()
+        // End-of-Month
+        const snap = snapshot(counts)
         events.push({
           year: y, month: m, step: nextStep(y),
           kind: 'monthEnd',
           note: `Monat ${m} Ende`,
-          monthlyTotalSales, l1Count, monthlyPerL1,
-          myCumul, l1Cumul, ...snap,
-          myJump: false, l1Jump: false,
+          counts, monthlyTotalSales, monthlyPerLn, lineSales,
+          myCumul, ...snap,
+          myJump: false, anyJump: false,
           monthlyDiff: monthDiffSum,
         })
       }
@@ -219,17 +263,20 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
       let expertsTotal = 0
       const lines = matrix[y] || {}
       for (const l of LINES) expertsTotal += Number(lines[l]?.experts) || 0
+      // L1-Info aus lInfo-Array (Index 0 = L1)
+      const l1Info = last.lInfo?.[0] || { level: LEVELS[0], cumul: 0, diffPerSale: 0 }
       out[y] = {
         expertsTotal,
         monthlySales: monthlySalesEnd,
         yearlySales,
         myLevel: last.myLevel,
-        l1Level: last.l1Level,
-        diffPerSale: last.diffPerSale,
-        monthlyDiff: yearlyDiff / 12,   // Durchschnitt — Diff variiert über Jahr bei Stufensprung
+        l1Level: l1Info.level,
+        diffPerSale: l1Info.diffPerSale,
+        monthlyDiff: yearlyDiff / 12,   // Durchschnitt — Diff variiert bei Stufensprung
         yearlyDiff,
         cumulPoints: last.myCumul,
-        l1CumulPoints: last.l1Cumul,
+        l1CumulPoints: l1Info.cumul,
+        lInfo: last.lInfo,  // alle 10 Levels für L2..L10-Anzeige
       }
     }
     return out
@@ -490,7 +537,7 @@ function DebugTrace({ matrix, perYear, monthlyTrace, market, currency, navigator
       <div style={{ marginBottom: 12, fontFamily: 'system-ui, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
         Markt: <strong>{market.toUpperCase()}</strong> · navigator-Tarif: <strong>{navBonus} {currency}</strong><br/>
         <strong>L1-Modell (MLM-korrekt):</strong> Linie-1-Expert sieht <em>alle</em> monatlichen Team-Sales (eigene Linie 1 + komplette Downline L2..L10), geteilt durch L1-Anzahl. Bei 1 L1-Expert hat dieser exakt MEINE Punkte → Stufengleichheit → Diff = 0.<br/>
-        <strong>Recruitment-Korrektur:</strong> jeder von dir rekrutierte L1-Expert zählt direkt als 1 Sale für dich (du hast ihm das Gerät verkauft). Analog für L1 ↔ L2.<br/>
+        <strong>Recruitment-Korrektur (MLM-korrekt):</strong> bei jedem Verkauf bekommt der <em>Verkäufer + ALLE Upline</em> +1 Punkt. Der <em>Käufer bekommt 0</em> für seinen eigenen Anlagenkauf. → Du rekrutierst L1: nur du +1, L1 = 0. L1 rekrutiert L2: L1 +1, du +1, L2 = 0. So entsteht dein Stufen-Vorsprung mit mehreren Linien.<br/>
         <strong>Sale-by-Sale-Detail:</strong> jeder Stufensprung (MEIN ⬆ und/oder L1 ⬆) bekommt eine eigene Zeile mit Schritt-Nummer (Y/SS) — voll nachvollziehbar.<br/>
         <strong>Diff-Formel:</strong> <code>max(0, MeinTarif − L1Tarif)</code> je Sale, summiert über den Monat (Tarif zum Sale-Zeitpunkt — Stufensprünge mid-month wirken sofort).
       </div>
@@ -557,11 +604,29 @@ function DebugTrace({ matrix, perYear, monthlyTrace, market, currency, navigator
 
 // Untertabelle: alle Events eines Jahres (init / recruitNew / jump / monthEnd)
 // Jeder Event = eine Zeile. Schritt-Nummer (Y/SS) zeigt Reihenfolge im Jahr.
+// Tabelle zeigt MEIN-Stand + L1..L10 jeweils mit Anteil/Stand/Level/Tarif/Diff
+// → wird breit, daher horizontal scrollbar.
 function MonthDetail({ year, months, market, currency }) {
+  // Welche Levels sind im Szenario aktiv? (count > 0 in irgendeinem Event)
+  const activeLevels = []
+  for (let n = 0; n < 10; n++) {
+    if (months.some(m => (m.counts?.[n] || 0) > 0 || (m.lInfo?.[n]?.count || 0) > 0)) {
+      activeLevels.push(n)
+    }
+  }
+  // Mindestens L1 anzeigen, auch wenn 0 — sonst sieht man gar nichts
+  if (activeLevels.length === 0) activeLevels.push(0)
+
+  // colSpan = fixe (Schritt, Ereignis, Sales, MEIN Stand, MEIN Level, MEIN Tarif)
+  //         + 4 Spalten je aktivem Level (Anteil, Stand, Level, Tarif, Diff = 5)
+  //         + Verdienst Monat
+  const innerCols = 6 + activeLevels.length * 5 + 1
+
   return (
     <tr>
       <td colSpan={13} style={{ padding: 0, background: '#fffdf5' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', borderLeft: '4px solid #c9a55a' }}>
+        <div style={{ overflowX: 'auto', borderLeft: '4px solid #c9a55a' }}>
+        <table style={{ borderCollapse: 'collapse', width: 'max-content', minWidth: '100%' }}>
           <thead>
             <tr style={{ background: '#fff5cc88', fontSize: 11 }}>
               <th style={th}>Schritt</th>
@@ -570,19 +635,23 @@ function MonthDetail({ year, months, market, currency }) {
               <th style={th}>MEIN Stand</th>
               <th style={th}>MEIN Level</th>
               <th style={th}>MEIN Tarif</th>
-              <th style={th}>L1-Anteil<br/>pro Expert</th>
-              <th style={th}>L1-Stand</th>
-              <th style={th}>L1 Level</th>
-              <th style={th}>L1 Tarif</th>
-              <th style={th}>Diff/Sale</th>
-              <th style={th}>Verdienst Monat</th>
+              {activeLevels.map(n => (
+                <React.Fragment key={`th-${n}`}>
+                  <th style={{ ...th, borderLeft: '2px solid #f0d57a', background: '#ffeebb88' }}>
+                    L{n+1}-Anteil<br/>pro Expert
+                  </th>
+                  <th style={{ ...th, background: '#ffeebb88' }}>L{n+1}-Stand</th>
+                  <th style={{ ...th, background: '#ffeebb88' }}>L{n+1} Level</th>
+                  <th style={{ ...th, background: '#ffeebb88' }}>L{n+1} Tarif</th>
+                  <th style={{ ...th, background: '#ffeebb88' }}>Diff zu L{n+1}</th>
+                </React.Fragment>
+              ))}
+              <th style={{ ...th, borderLeft: '2px solid #f0d57a' }}>Verdienst Monat<br/>(Diff vs L1)</th>
             </tr>
           </thead>
           <tbody>
             {months.map((m, idx) => {
               const myJumpStyle = m.myJump ? { background: '#dcfce788', fontWeight: 700 } : {}
-              const l1JumpStyle = m.l1Jump ? { background: '#fef3c788', fontWeight: 700 } : {}
-              // Zeilenfarbe je Event-Typ
               const rowBg =
                 m.kind === 'init'        ? '#fff7d622' :
                 m.kind === 'recruitNew'  ? '#fff7d622' :
@@ -592,19 +661,32 @@ function MonthDetail({ year, months, market, currency }) {
               return (
                 <tr key={`${m.year}-${m.step}-${idx}`} style={{ borderTop: '1px solid #f0d57a', background: rowBg }}>
                   <td style={{ ...td, fontWeight: m.kind === 'monthEnd' ? 700 : 500 }}>{stepLabel}</td>
-                  <td style={{ ...td, fontSize: 11, color: m.kind === 'jump' ? '#7a4a00' : '#555' }}>{m.note || '—'}</td>
+                  <td style={{ ...td, fontSize: 11, color: m.kind === 'jump' ? '#7a4a00' : '#555', maxWidth: 280, whiteSpace: 'normal' }}>{m.note || '—'}</td>
                   <td style={td}>{m.monthlyTotalSales}</td>
                   <td style={{ ...td, ...myJumpStyle }}>{Math.round(m.myCumul)}</td>
                   <td style={{ ...td, ...myJumpStyle }}>{m.myLevel?.label || '—'}{m.myJump ? ' ⬆' : ''}</td>
                   <td style={{ ...td, ...myJumpStyle }}>{m.myBonus} {currency}</td>
-                  <td style={td}>{m.monthlyPerL1?.toFixed(2) ?? '—'}</td>
-                  <td style={{ ...td, ...l1JumpStyle }}>{Math.round(m.l1Cumul)}</td>
-                  <td style={{ ...td, ...l1JumpStyle }}>{m.l1Level?.label || '—'}{m.l1Jump ? ' ⬆' : ''}</td>
-                  <td style={{ ...td, ...l1JumpStyle }}>{m.l1Bonus} {currency}</td>
-                  <td style={{ ...td, color: m.diffPerSale > 0 ? '#080' : '#999', fontWeight: 600 }}>
-                    {m.myBonus} − {m.l1Bonus} = <strong>{m.diffPerSale}</strong>
-                  </td>
-                  <td style={{ ...td, fontWeight: m.kind === 'monthEnd' ? 700 : 400, color: m.kind === 'monthEnd' ? '#3a2900' : '#999' }}>
+                  {activeLevels.map(n => {
+                    const lvl = m.lInfo?.[n] || { cumul: 0, level: { label: '—' }, bonus: 0, diffPerSale: 0 }
+                    const cnt = m.counts?.[n] || 0
+                    const anteil = m.monthlyPerLn?.[n] || 0
+                    const isOff = cnt === 0
+                    const cellSty = { ...td, opacity: isOff ? 0.4 : 1 }
+                    return (
+                      <React.Fragment key={`td-${n}-${idx}`}>
+                        <td style={{ ...cellSty, borderLeft: '2px solid #f0d57a' }}>
+                          {isOff ? '—' : anteil.toFixed(2)}
+                        </td>
+                        <td style={cellSty}>{isOff ? '—' : Math.round(lvl.cumul)}</td>
+                        <td style={cellSty}>{isOff ? '—' : (lvl.level?.label || '—')}</td>
+                        <td style={cellSty}>{isOff ? '—' : `${lvl.bonus} ${currency}`}</td>
+                        <td style={{ ...cellSty, color: lvl.diffPerSale > 0 ? '#080' : '#999', fontWeight: 600 }}>
+                          {isOff ? '—' : `${m.myBonus} − ${lvl.bonus} = ${lvl.diffPerSale}`}
+                        </td>
+                      </React.Fragment>
+                    )
+                  })}
+                  <td style={{ ...td, borderLeft: '2px solid #f0d57a', fontWeight: m.kind === 'monthEnd' ? 700 : 400, color: m.kind === 'monthEnd' ? '#3a2900' : '#999' }}>
                     {m.kind === 'monthEnd' ? `${Math.round(m.monthlyDiff).toLocaleString('de-DE')} ${currency}` : '—'}
                   </td>
                 </tr>
@@ -612,6 +694,7 @@ function MonthDetail({ year, months, market, currency }) {
             })}
           </tbody>
         </table>
+        </div>
       </td>
     </tr>
   )
