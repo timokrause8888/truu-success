@@ -96,27 +96,29 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
   // Stufensprünge werden pro Monat erkannt und in der Debug-Tabelle
   // hervorgehoben. So sieht man genau wann L1 vs. ich aufsteigt.
   const monthlyTrace = useMemo(() => {
-    // MLM-korrekte Sale-by-Sale-Simulation für 10 Levels.
+    // MODELL: 10 PARALLELE DIREKTLINIEN.
+    //
+    // L1, L2, ..., L10 sind keine MLM-Tiefe (L1→L2→L3...), sondern 10 direkte
+    // Linien unter MIR. Jeder L_n-Expert ist von mir persönlich rekrutiert.
     //
     // PUNKT-GUTSCHRIFT-REGEL:
-    //   - Bei jedem Verkauf bekommt der VERKÄUFER +1 Punkt + alle UPLINE +1.
-    //   - Der KÄUFER bekommt KEINE Punkte für den eigenen Anlagenkauf.
-    //   - Das gilt sowohl für reguläre Verkäufe als auch für Recruitment-Sales
-    //     (= das Gerät, das ein neuer Expert kauft, um ins System zu starten).
+    //   - Käufer bekommt 0 für eigenen Anlagenkauf.
+    //   - Verkäufer + alle Upline (= nur ICH) bekommen +1.
     //
     // Konkret:
-    //   - Recruitment eines L1 durch mich: +1 für mich. L1 = 0.
-    //   - Recruitment eines L2 durch L1:   +1 für L1, +1 für mich. L2 = 0.
-    //   - Recruitment eines L_n durch L_{n-1}: +1 für jede Upline-Stufe.
-    //   - Reguläre Sale eines L_n: +1 für L_n + alle Upline.
+    //   - Ich rekrutiere L_n: ich +1, L_n = 0  (für jede Linie n=1..10)
+    //   - L_n verkauft (eigene Line-Sales): L_n +1, ich +1
+    //   - L_n hat eigene Downline — die ist NICHT in der Matrix, ihre Sales
+    //     sind im sales_n bereits aggregiert. Das L_n-Cumul wächst entsprechend.
     //
     // Per L_n-Expert (averaged):
-    //   l_n.cumul += sum(newRecruits[n+1..10]) / counts[n] beim Jahreswechsel
-    //   l_n.cumul += monthlyPerLn[n] / monthlyTotalSales je Total-Sale
-    //                 (monthlyPerLn[n] = sum_{k=n..10}(experts_k×sales_k) / counts[n])
+    //   l_n.cumul += 0 beim Recruit (er ist Käufer, nicht Verkäufer)
+    //   l_n.cumul += sales_n / monthlyTotalSales je Total-Sale
+    //                 (sales_n = monthlyPerLn[n] = lineSales[n] / counts[n])
     //
-    // Damit kann ein User mit z.B. 6 Linien einen Stufen-Vorsprung erreichen
-    // → Diff/Sale wird positiv, Verdienst entsteht.
+    // VERDIENST-Berechnung:
+    //   Pro Monat = Σ über Linien n: lineSales[n] × max(0, myBonus − L_n_bonus)
+    //   → Jede Linie zählt einzeln. Diff zu L_n wirkt nur auf Sales von Linie n.
     const events = []
     let myCumul = 0
     const lCumuls = Array.from({ length: 10 }, () => 0)  // Index 0 = L1
@@ -150,40 +152,31 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
       const totalNew = newRecruits.reduce((s, n) => s + n, 0)
 
       // Monthly sales pro Linie und pro L_n-Expert
+      // monthlyPerLn[n] = sales_n (Sales pro L_n-Expert in der eigenen Linie)
       const lineSales = LINES.map(l => {
         const c = lines[l] || {}
         return (Number(c.experts) || 0) * (Number(c.sales) || 0)
       })
       const monthlyTotalSales = lineSales.reduce((s, x) => s + x, 0)
-      // monthlyPerLn[n] = sum_{k=n..9}(lineSales[k]) / counts[n]
       const monthlyPerLn = counts.map((cnt, n) => {
         if (cnt <= 0) return 0
-        let total = 0
-        for (let k = n; k < 10; k++) total += lineSales[k]
-        return total / cnt
+        return lineSales[n] / cnt   // = sales_n (Per-Expert-Sales-Rate für Linie n)
       })
 
       // Recruitment-Korrektur am Jahreswechsel
+      // Käufer = 0, Verkäufer/Upline = +1. Da L_n direkt unter MIR steht,
+      // bin ich der einzige Verkäufer beim Recruit → nur ICH bekomme +1.
+      // L_n-Cumul bleibt 0 vom Recruit (sie SIND der Käufer).
       if (totalNew > 0) {
-        // Für mich: alle Recruits zählen (ich bin oben in der Kette)
         myCumul += totalNew
-        // Für L_n: Recruits in tieferen Linien (n+1..10) — pro L_n-Expert
-        for (let n = 0; n < 10; n++) {
-          const cnt = counts[n]
-          if (cnt > 0) {
-            let belowSum = 0
-            for (let k = n + 1; k < 10; k++) belowSum += newRecruits[k]
-            if (belowSum > 0) lCumuls[n] += belowSum / cnt
-          }
-        }
         const snap = snapshot(counts)
         const linesNote = newRecruits.map((n, i) => n > 0 ? `L${i+1}+${n}` : null).filter(Boolean).join(' · ')
         events.push({
           year: y, step: nextStep(y),
           kind: y === 1 ? 'init' : 'recruitNew',
           note: y === 1
-            ? `Start: ${totalNew} Recruits · ${linesNote}`
-            : `Jahreswechsel: ${linesNote}`,
+            ? `Start: ${totalNew} Recruits direkt von mir · ${linesNote}`
+            : `Jahreswechsel: ${linesNote} (alle direkt von mir rekrutiert)`,
           counts, monthlyTotalSales, monthlyPerLn, lineSales,
           myCumul, ...snap,
           myJump: snap.myLevel.key !== prevMyLevel.key,
@@ -196,41 +189,42 @@ export default function TeamBuildingSimulator({ locale = 'de', market = 'de' }) 
       prevCounts = counts.slice()
 
       for (let m = 1; m <= 12; m++) {
-        // Sale-by-Sale: per Total-Sale: my +1, L_n +monthlyPerLn[n]/monthlyTotalSales
-        const intSales = Math.round(monthlyTotalSales)
-        const lSteps = monthlyPerLn.map(p => intSales > 0 ? p / intSales : 0)
+        // Sale-by-Sale, iteriert PRO LINIE (jede Linie unabhängig).
+        // Pro Sale in Linie n: my +1, L_n (per Expert) += 1/counts[n]
+        // Diff/Sale = max(0, myBonus − L_n_bonus) ← gilt nur für SALES von Linie n
         let monthDiffSum = 0
-        for (let s = 1; s <= intSales; s++) {
-          myCumul += 1
-          for (let n = 0; n < 10; n++) {
-            if (counts[n] > 0) lCumuls[n] += lSteps[n]
-          }
-          const snap = snapshot(counts)
-          // Verdienst-Monat = Diff vs L1 (bisheriges Verhalten beibehalten,
-          // weil das die typische 'next-rated above'-Differenz im Diff-MLM
-          // ist; tiefere Diffs sind in den L2..L10-Spalten als Info sichtbar)
-          monthDiffSum += snap.lInfo[0].diffPerSale
-          const myJump = snap.myLevel.key !== prevMyLevel.key
-          const jumpedLevels = []
-          for (let n = 0; n < 10; n++) {
-            if (snap.lInfo[n].level.key !== prevLevels[n].key && counts[n] > 0) {
-              jumpedLevels.push(`L${n+1} ⬆ ${snap.lInfo[n].level.label}`)
+        for (let n = 0; n < 10; n++) {
+          if (counts[n] <= 0 || lineSales[n] <= 0) continue
+          const lineMonthlySales = Math.round(lineSales[n])
+          const lStepN = 1 / counts[n]
+          for (let s = 1; s <= lineMonthlySales; s++) {
+            myCumul += 1
+            lCumuls[n] += lStepN
+            const snap = snapshot(counts)
+            // Verdienst aus diesem Sale: Diff zur L_n-Stufe (eigene Linie!)
+            monthDiffSum += snap.lInfo[n].diffPerSale
+            const myJump = snap.myLevel.key !== prevMyLevel.key
+            const jumpedLevels = []
+            for (let k = 0; k < 10; k++) {
+              if (snap.lInfo[k].level.key !== prevLevels[k].key && counts[k] > 0) {
+                jumpedLevels.push(`L${k+1} ⬆ ${snap.lInfo[k].level.label}`)
+              }
             }
-          }
-          if (myJump || jumpedLevels.length > 0) {
-            const parts = []
-            if (myJump) parts.push(`MEIN ⬆ ${snap.myLevel.label}`)
-            parts.push(...jumpedLevels)
-            events.push({
-              year: y, month: m, sale: s, step: nextStep(y),
-              kind: 'jump',
-              note: `Sale ${s}: ${parts.join(' · ')}`,
-              counts, monthlyTotalSales, monthlyPerLn, lineSales,
-              myCumul, ...snap,
-              myJump, anyJump: jumpedLevels.length > 0, monthlyDiff: 0,
-            })
-            prevMyLevel = snap.myLevel
-            for (let n = 0; n < 10; n++) prevLevels[n] = snap.lInfo[n].level
+            if (myJump || jumpedLevels.length > 0) {
+              const parts = []
+              if (myJump) parts.push(`MEIN ⬆ ${snap.myLevel.label}`)
+              parts.push(...jumpedLevels)
+              events.push({
+                year: y, month: m, sale: s, step: nextStep(y),
+                kind: 'jump',
+                note: `L${n+1} Sale ${s}: ${parts.join(' · ')}`,
+                counts, monthlyTotalSales, monthlyPerLn, lineSales,
+                myCumul, ...snap,
+                myJump, anyJump: jumpedLevels.length > 0, monthlyDiff: 0,
+              })
+              prevMyLevel = snap.myLevel
+              for (let k = 0; k < 10; k++) prevLevels[k] = snap.lInfo[k].level
+            }
           }
         }
         // End-of-Month
@@ -537,7 +531,9 @@ function DebugTrace({ matrix, perYear, monthlyTrace, market, currency, navigator
       <div style={{ marginBottom: 12, fontFamily: 'system-ui, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
         Markt: <strong>{market.toUpperCase()}</strong> · navigator-Tarif: <strong>{navBonus} {currency}</strong><br/>
         <strong>L1-Modell (MLM-korrekt):</strong> Linie-1-Expert sieht <em>alle</em> monatlichen Team-Sales (eigene Linie 1 + komplette Downline L2..L10), geteilt durch L1-Anzahl. Bei 1 L1-Expert hat dieser exakt MEINE Punkte → Stufengleichheit → Diff = 0.<br/>
-        <strong>Recruitment-Korrektur (MLM-korrekt):</strong> bei jedem Verkauf bekommt der <em>Verkäufer + ALLE Upline</em> +1 Punkt. Der <em>Käufer bekommt 0</em> für seinen eigenen Anlagenkauf. → Du rekrutierst L1: nur du +1, L1 = 0. L1 rekrutiert L2: L1 +1, du +1, L2 = 0. So entsteht dein Stufen-Vorsprung mit mehreren Linien.<br/>
+        <strong>Modell — 10 parallele Direktlinien:</strong> L1..L10 sind keine MLM-Tiefe, sondern 10 von dir <em>direkt</em> rekrutierte Linien. Jede ist unabhängig.<br/>
+        <strong>Punktgutschrift:</strong> beim Recruit bekommt nur DU +1 (du verkaufst, L_n kauft = 0). Bei eigenen Sales von L_n: L_n +1, du +1.<br/>
+        <strong>Verdienst pro Monat:</strong> Σ über alle Linien n von <code>lineSales[n] × max(0, MeinTarif − L_n-Tarif)</code>. Jede Linie zählt einzeln, Diff zu L_n wirkt nur auf deren Sales.<br/>
         <strong>Sale-by-Sale-Detail:</strong> jeder Stufensprung (MEIN ⬆ und/oder L1 ⬆) bekommt eine eigene Zeile mit Schritt-Nummer (Y/SS) — voll nachvollziehbar.<br/>
         <strong>Diff-Formel:</strong> <code>max(0, MeinTarif − L1Tarif)</code> je Sale, summiert über den Monat (Tarif zum Sale-Zeitpunkt — Stufensprünge mid-month wirken sofort).
       </div>
