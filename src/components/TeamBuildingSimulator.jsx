@@ -500,13 +500,13 @@ function MonthDetail({ year, months, market, currency }) {
             <tr style={{ background: '#fff5cc88', fontSize: 11 }}>
               <th style={th}>Monat</th>
               <th style={th}>Sales (Total)</th>
+              <th style={th}>MEIN Stand</th>
+              <th style={th}>MEIN Level</th>
+              <th style={th}>MEIN Tarif</th>
               <th style={th}>L1-Anteil<br/>pro Expert</th>
               <th style={th}>L1-Stand</th>
               <th style={th}>L1 Level</th>
               <th style={th}>L1 Tarif</th>
-              <th style={th}>MEIN Stand</th>
-              <th style={th}>MEIN Level</th>
-              <th style={th}>MEIN Tarif</th>
               <th style={th}>Diff/Sale</th>
               <th style={th}>Verdienst Monat</th>
             </tr>
@@ -519,13 +519,13 @@ function MonthDetail({ year, months, market, currency }) {
                 <tr key={`${m.year}-${m.month}`} style={{ borderTop: '1px solid #f0d57a' }}>
                   <td style={td}>{m.year}/{String(m.month).padStart(2,'0')}</td>
                   <td style={td}>{m.monthlyTotalSales}</td>
+                  <td style={{ ...td, ...myJumpStyle }}>{Math.round(m.myCumul)}</td>
+                  <td style={{ ...td, ...myJumpStyle }}>{m.myLevel?.label || '—'}{m.myJump ? ' ⬆' : ''}</td>
+                  <td style={{ ...td, ...myJumpStyle }}>{m.myBonus} {currency}</td>
                   <td style={td}>{m.monthlyPerL1?.toFixed(2) || '—'}</td>
                   <td style={{ ...td, ...l1JumpStyle }}>{Math.round(m.l1Cumul)}</td>
                   <td style={{ ...td, ...l1JumpStyle }}>{m.l1Level?.label || '—'}{m.l1Jump ? ' ⬆' : ''}</td>
                   <td style={{ ...td, ...l1JumpStyle }}>{m.l1Bonus} {currency}</td>
-                  <td style={{ ...td, ...myJumpStyle }}>{Math.round(m.myCumul)}</td>
-                  <td style={{ ...td, ...myJumpStyle }}>{m.myLevel?.label || '—'}{m.myJump ? ' ⬆' : ''}</td>
-                  <td style={{ ...td, ...myJumpStyle }}>{m.myBonus} {currency}</td>
                   <td style={{ ...td, color: m.diffPerSale > 0 ? '#080' : '#999', fontWeight: 600 }}>
                     {m.myBonus} − {m.l1Bonus} = <strong>{m.diffPerSale}</strong>
                   </td>
