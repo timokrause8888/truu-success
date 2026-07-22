@@ -7,7 +7,6 @@ import EarningsPanel from './components/EarningsPanel'
 import BoosterPanel from './components/BoosterPanel'
 import HeroesLogo from './components/HeroesLogo'
 import PlanPdfViewer from './components/PlanPdfViewer'
-import TeamBuildingSimulator from './components/TeamBuildingSimulator'
 
 /* eslint-disable no-undef */
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'local'
@@ -92,9 +91,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* Setup-Bar: Markt + Karrierestatus + Trennstrich + Stilauswahl + JETZT.
-         Nur im Eigenumsatz-Modus relevant — Teamaufbau hat eigene Eingabe-Ansicht. */}
-      {mode === 'eigen' && (
+      {/* Setup-Bar: Markt + Karrierestatus + Trennstrich + Stilauswahl + JETZT */}
       <div className="setup-bar">
         <label>
           <span className="setup-label">{t('market', locale)}</span>
@@ -142,11 +139,17 @@ export default function App() {
           {levelChanged && <span className="level-up">↑ aufgestiegen</span>}
         </div>
       </div>
-      )}
 
       {mode === 'team' && (
-        <main className="team-sim-wrap">
-          <TeamBuildingSimulator locale={locale} market={market} />
+        <main className="team-coming-soon">
+          <div className="team-coming-card">
+            <div className="team-coming-icon">👥</div>
+            <h2>{t('team_soon_title', locale)}</h2>
+            <p>{t('team_soon_text', locale)}</p>
+            <button className="cta cta-secondary" onClick={() => setMode('eigen')}>
+              ← {t('mode_eigen', locale)}
+            </button>
+          </div>
         </main>
       )}
 
@@ -185,7 +188,7 @@ export default function App() {
               <button
                 className={`sale-pill all ${activeSale > totalSales ? 'active' : ''}`}
                 onClick={() => setActiveSale(totalSales + 1)}
-              >{t('show_all', locale, { n: totalSales })}</button>
+              >{t('show_all', locale)}</button>
             </div>
             <button
               className="sale-nav-btn primary"

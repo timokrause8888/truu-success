@@ -2,33 +2,11 @@
 // als PDF. Verwendet die native Browser-PDF-Anzeige via <iframe>.
 // Plus: Download-Button + 'In neuem Tab öffnen' für Mobile-User, bei
 // denen iframes mit PDFs manchmal nicht zuverlässig laufen (iOS Safari).
-//
-// Sprach-Mapping:
-//   de, bar          → success-plan-de.pdf  (Bayerisch nutzt das DE-PDF)
-//   en               → success-plan-en.pdf
-//   es               → success-plan-es.pdf
-//   alle anderen     → success-plan-en.pdf  (EN als universeller Fallback,
-//                      bis es lokalisierte Fassungen gibt)
 
 import { useEffect } from 'react'
 import { t } from '../lib/i18n'
 
-// Welches PDF wird für welche UI-Sprache angezeigt?
-function pdfUrlForLocale(locale) {
-  switch (locale) {
-    case 'de':
-    case 'bar':
-      return '/success-plan-de.pdf'
-    case 'es':
-      return '/success-plan-es.pdf'
-    case 'en':
-      return '/success-plan-en.pdf'
-    default:
-      // Bulgarisch, Französisch, Italienisch, Niederländisch, Portugiesisch,
-      // Russisch — bis wir eigene PDFs haben, bekommen alle das EN-PDF.
-      return '/success-plan-en.pdf'
-  }
-}
+const PDF_URL = '/success-plan-de.pdf'
 
 export default function PlanPdfViewer({ open, onClose, locale }) {
   // Body-Scroll während Modal offen ist verhindern
@@ -45,9 +23,6 @@ export default function PlanPdfViewer({ open, onClose, locale }) {
   }, [open, onClose])
 
   if (!open) return null
-
-  const PDF_URL = pdfUrlForLocale(locale)
-
   return (
     <div className="pdf-modal-backdrop" onClick={onClose}>
       <div className="pdf-modal" onClick={e => e.stopPropagation()}>
@@ -75,9 +50,6 @@ export default function PlanPdfViewer({ open, onClose, locale }) {
           </div>
         </div>
         <iframe
-          // key=PDF_URL erzwingt Reload des iframe, wenn sich die Sprache
-          // ändert während das Modal noch offen ist.
-          key={PDF_URL}
           src={PDF_URL + '#view=FitH'}
           title="truu success plan"
           className="pdf-modal-iframe"

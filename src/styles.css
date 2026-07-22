@@ -295,7 +295,7 @@ body {
   font-family: inherit; font-size: 14px; font-weight: 600;
   cursor: pointer; transition: all 0.15s;
 }
-.sale-nav-btn:hover:not(:disabled):not(.primary) {
+.sale-nav-btn:hover:not(:disabled) {
   background: var(--cream-3); border-color: var(--gold-3);
 }
 .sale-nav-btn.primary {
@@ -303,32 +303,11 @@ body {
   color: #fff; border: none;
   box-shadow: 0 2px 6px rgba(154, 111, 0, 0.3);
 }
-.sale-nav-btn.primary:hover:not(:disabled),
-.sale-nav-btn.primary:focus:not(:disabled) {
-  background: linear-gradient(135deg, var(--gold-2), var(--gold-3));
-  color: #fff;
-  filter: brightness(1.08);
-  box-shadow: 0 3px 10px rgba(154, 111, 0, 0.4);
+.sale-nav-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.05); box-shadow: 0 3px 10px rgba(154, 111, 0, 0.4);
 }
 .sale-nav-btn:disabled {
-  cursor: not-allowed;
-  background: #f3f0e8;
-  color: #b8b4a8;
-  border: 1.5px solid #e6e1d4;
-  box-shadow: none;
-  filter: none;
-}
-/* Primary-Variante explizit: gleiche dezente Disabled-Optik */
-.sale-nav-btn.primary:disabled {
-  background: #f3f0e8;
-  color: #b8b4a8;
-  border: 1.5px solid #e6e1d4;
-  box-shadow: none;
-  filter: none;
-}
-.sale-nav-btn.primary:disabled:hover {
-  filter: none;
-  box-shadow: none;
+  opacity: 0.4; cursor: not-allowed;
 }
 .sale-nav-pills {
   display: flex; gap: 5px; flex: 1; justify-content: center;
@@ -638,194 +617,4 @@ body {
   .sale-nav-btn { width: 100%; }
   .sale-nav-pills { order: -1; justify-content: flex-start; }
   .card-total.big { font-size: 22px; }
-}
-
-/* ───── Team Building Simulator ───── */
-.team-sim-wrap {
-  margin: 12px 0 32px;
-  width: 100%;
-}
-.team-sim {
-  background: var(--bg-card, #fff);
-  border-radius: 14px;
-  padding: 22px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-.team-sim-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 16px; margin-bottom: 14px; flex-wrap: wrap;
-}
-.team-sim-title { margin: 0 0 2px; font-size: 20px; color: var(--gold-3); }
-.team-sim-sub   { margin: 0; font-size: 13px; color: #6b7280; max-width: 700px; }
-.team-sim-reset {
-  padding: 8px 14px;
-  border: 1.5px solid var(--gold-2);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--gold-3);
-  font-weight: 600; font-size: 13px;
-  cursor: pointer; transition: all .15s;
-}
-.team-sim-reset:hover { background: var(--cream-3); }
-
-.team-sim-scroll {
-  overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid var(--border, #e5e7eb);
-}
-.team-sim-table {
-  border-collapse: separate; border-spacing: 0;
-  font-size: 12px; width: max-content; min-width: 100%;
-}
-.team-sim-table th, .team-sim-table td {
-  border-right: 1px solid var(--border, #e5e7eb);
-  border-bottom: 1px solid var(--border, #e5e7eb);
-  text-align: center; padding: 4px 6px;
-  white-space: nowrap;
-}
-.team-sim-table th.t-year-h, .team-sim-table th.t-line-h, .team-sim-table th.t-calc-h {
-  background: #f5f0e0;
-  color: #4a3a10;
-  font-weight: 700;
-  padding: 6px 8px;
-}
-.team-sim-table th.t-line-h { background: #f8f3e6; }
-.team-sim-table th.t-sub-h {
-  background: #faf5e8; font-weight: 500; color: #6b5a30; font-size: 11px;
-}
-.team-sim-table th.t-calc-h.gold { background: var(--gold-2); color: #fff; }
-
-.team-sim-table td.t-year {
-  background: #f5f0e0; font-weight: 700; color: #4a3a10; min-width: 38px;
-}
-.team-sim-table td.t-input {
-  padding: 0; min-width: 56px; max-width: 70px;
-}
-.team-sim-table td.t-input input {
-  width: 100%; box-sizing: border-box;
-  border: none; background: transparent;
-  padding: 6px 4px; text-align: center; font-size: 13px;
-  font-family: inherit;
-  appearance: textfield; -moz-appearance: textfield;
-  color: #1f2937;
-}
-.team-sim-table td.t-input input:focus {
-  outline: 2px solid var(--gold-2); outline-offset: -2px;
-  background: #fffaeb;
-}
-.team-sim-table td.t-input input::-webkit-inner-spin-button,
-.team-sim-table td.t-input input::-webkit-outer-spin-button {
-  -webkit-appearance: none; margin: 0;
-}
-.team-sim-table td.t-calc {
-  background: #fafaf6;
-  font-weight: 600; color: #1f2937; font-variant-numeric: tabular-nums;
-  min-width: 70px;
-}
-.team-sim-table td.t-calc.gold {
-  background: #fff8e1; color: #8a6500; font-weight: 700;
-}
-.team-sim-table tr.t-totals td.t-calc,
-.team-sim-table tr.t-totals td.t-year {
-  background: #f5e9c4;
-  border-top: 2px solid var(--gold-2);
-  font-size: 13px; font-weight: 800;
-}
-
-.team-sim-levels { margin-top: 18px; }
-.team-sim-levels h3 { margin: 0 0 8px; font-size: 14px; color: #4a3a10; }
-.team-sim-levels-row {
-  display: flex; gap: 8px; flex-wrap: wrap;
-}
-.team-sim-level-pill {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 8px 12px;
-  border: 1.5px solid var(--gold-2);
-  border-radius: 10px;
-  background: #fff;
-  min-width: 88px;
-}
-.team-sim-level-pill .t-yr { font-size: 10px; color: #9a6f00; font-weight: 600; }
-.team-sim-level-pill strong { font-size: 13px; color: #4a3a10; margin: 2px 0; }
-.team-sim-level-pill .t-diff { font-size: 11px; color: #6b7280; font-variant-numeric: tabular-nums; }
-
-.team-sim-disclaimer {
-  margin-top: 14px;
-  padding: 10px 14px;
-  background: #fffbeb;
-  border-left: 3px solid var(--gold-2);
-  border-radius: 6px;
-  font-size: 12px; color: #6b5a30; line-height: 1.5;
-}
-
-/* ───── Sticky-Auswertungs-Spalten + 2-zeilige Header ───── */
-/* 5 Spalten am rechten Rand, von rechts nach links:
-   col-c5 (Diff/Jahr)     → right: 0
-   col-c4 (Diff/Monat)    → right: 88px
-   col-c3 (Verkäufe/Jahr) → right: 176px
-   col-c2 (Verkäufe/Monat)→ right: 264px
-   col-c1 (Experts gesamt)→ right: 352px
-   Jede Spalte ist 88px breit. */
-.team-sim-table th.sticky,
-.team-sim-table td.sticky {
-  position: sticky;
-  width: 88px; min-width: 88px; max-width: 88px;
-  /* Linker Border als Schatten-Trenner — markiert den Sticky-Bereich */
-}
-.team-sim-table .col-c1 { right: 352px; }
-.team-sim-table .col-c2 { right: 264px; }
-.team-sim-table .col-c3 { right: 176px; }
-.team-sim-table .col-c4 { right:  88px; }
-.team-sim-table .col-c5 { right:   0px; }
-
-/* Header-Zeilen müssen über den Body-Zellen liegen */
-.team-sim-table thead th.sticky { z-index: 4; }
-.team-sim-table tbody td.sticky { z-index: 2; }
-
-/* Schmaler Schatten links neben der ersten Sticky-Spalte → klare Trennung
-   vom scrollbaren Linien-Bereich */
-.team-sim-table .col-c1 {
-  box-shadow: -4px 0 6px -3px rgba(0,0,0,0.12);
-}
-
-/* 2-zeilige Header: oben dünn, unten fett. Reduziert Spaltenbreite massiv. */
-.team-sim-table th.t-calc-h .t-h-top,
-.team-sim-table th.t-calc-h .t-h-bot {
-  display: block;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-.team-sim-table th.t-calc-h .t-h-top {
-  font-weight: 300;
-  font-size: 11px;
-  color: #6b5a30;
-  letter-spacing: 0.2px;
-}
-.team-sim-table th.t-calc-h .t-h-bot {
-  font-weight: 800;
-  font-size: 12px;
-  color: #4a3a10;
-  margin-top: 1px;
-}
-.team-sim-table th.t-calc-h.gold .t-h-top { color: #fff5c8; font-weight: 300; }
-.team-sim-table th.t-calc-h.gold .t-h-bot { color: #fff;    font-weight: 800; }
-
-/* Year-Spalte links sticky (nice-to-have, damit man die Jahr-Nr immer sieht) */
-.team-sim-table .t-year-h,
-.team-sim-table .t-year {
-  position: sticky; left: 0;
-}
-.team-sim-table thead .t-year-h { z-index: 5; }
-.team-sim-table tbody .t-year   { z-index: 3; }
-/* Schatten rechts neben Year-Spalte */
-.team-sim-table .t-year-h,
-.team-sim-table .t-year {
-  box-shadow: 4px 0 6px -3px rgba(0,0,0,0.08);
-}
-
-/* L1-Level-Anzeige in der Karriere-Verlauf-Pille */
-.team-sim-level-pill .t-l1 {
-  font-size: 10px; color: #9a6f00; font-weight: 600;
-  margin: 1px 0;
-  font-style: italic;
 }
