@@ -1,108 +1,119 @@
-// scenario.js — Das konkrete 8-Verkaufs-Szenario, das auf der Webseite
+// scenario.js — Das konkrete Verkaufs-Szenario, das auf der Webseite
 // durchgeklickt wird. Hero (= "Du") ist fertig ausgebildeter Expert,
 // macht Wasserstudie + Vortrag + Abschluss bei jedem Verkauf, an dem
-// er beteiligt ist.
+// er beteiligt ist. Die direkten Kunden empfehlen weiter — ihre Sub-
+// Empfehlungen werden mit hierarchischer Outline-Notation beschriftet
+// (1, 1.1, 1.1.1, 2.1, 2.1.1, 3.1, 6.1).
 //
-// Verkaufsbaum:
+// Verkaufsbaum (Display-Labels in []):
 //
-//                    DU (Hero, fertiger Expert)
-//                  /  /  /  \  \  \
-//                 1  2  3  4  6  7
-//                 |
-//                 5
-//                 |
-//                 8
+//                          DU
+//          /  /  /  /  \  \
+//        [1][2][3][4][5][6]                ← Sales 1,2,3,4,6,7
+//         |  |  |        |
+//      [1.1][2.1][3.1] [6.1]                ← Sales 5,9,10,12
+//         |  |
+//      [1.1.1][2.1.1]                       ← Sales 8,11
+//         |
+//      [1.1.1.1]                            ← Sale 13
 //
-// Sales 1, 2, 3, 4, 6, 7 sind Direktverkäufe vom Hero (= Eigenverkauf).
-// Sale 5 wird von Kunde #1 empfohlen — Hero macht Studie + Abschluss.
-// Sale 8 wird von Kunde #5 empfohlen — Hero macht Studie + Abschluss.
+// Stufenwechsel-Logik: User wählt Start-Level oben (z.B. 'navigator');
+// mit jedem Verkauf kommt ein success Punkt dazu, bei Erreichen der
+// nächsten Schwelle wechselt die Stufe automatisch und der Verdienst-
+// plan rechnet hoch (z.B. nav 0-6 → commander ab 7).
 
 import { LEVELS, levelForPoints } from './successPlan'
 
-// Hero-Default-Level: fertiger Expert mit ausreichend Punkten, dass die
-// Differenzprovision-Logik sinnvoll greift. Wir nehmen commander★★ (43-90)
-// als plausiblen Mid-Career-Stand für die Visualisierung.
-export const DEFAULT_HERO_LEVEL_KEY = 'commander_2'
+export const DEFAULT_HERO_LEVEL_KEY = 'navigator'
 
-/**
- * Liefert die Heroes-Liste für das Szenario, abhängig vom gewählten
- * Hero-Level. Die direkten Kunden (#1, #5) werden in dem Moment, in
- * dem sie selbst verkaufen, zu navigatoren — sie haben dann 1 success
- * Punkt aus ihrem ersten eigenen Verkauf. Wir vereinfachen aber: alle
- * Empfehler-Kunden gelten als navigator, da sie nur 1-2 Punkte haben.
- */
-export function buildHeroes(heroLevelKey = DEFAULT_HERO_LEVEL_KEY) {
-  const heroLevel = LEVELS.find(l => l.key === heroLevelKey) || LEVELS[3]
-  const navigatorLevel = LEVELS[0]   // navigator
+const HERO_LABELS = {
+  hero:   'Du',
+  // Reihe 1: Direktkunden des Heros, linear nummeriert 1-6
+  cust1:  '1',  cust2:  '2',  cust3:  '3',  cust4:  '4',
+  cust6:  '5',  cust7:  '6',
+  // Reihe 2: Sub-Empfehlungen
+  cust5:  '1.1',   cust9:  '2.1',   cust10: '3.1',  cust12: '6.1',
+  // Reihe 3: Sub-Sub-Empfehlungen
+  cust8:  '1.1.1', cust11: '2.1.1',
+  // Reihe 4: Sub-Sub-Sub
+  cust13: '1.1.1.1',
+}
+
+export function buildHeroes(heroLevelKey = DEFAULT_HERO_LEVEL_KEY, atSaleN = null) {
+  const startLevel = LEVELS.find(l => l.key === heroLevelKey) || LEVELS[0]
+  const accumulatedPoints = atSaleN != null
+    ? startLevel.min + atSaleN
+    : startLevel.min
+  const currentHeroLevel = levelForPoints(accumulatedPoints)
+  const navigatorLevel = LEVELS[0]
+  const mk = (id, sponsorId) => ({
+    id, sponsorId,
+    label: HERO_LABELS[id] || id,
+    level: id === 'hero' ? currentHeroLevel : navigatorLevel,
+  })
   return [
-    { id: 'hero',     label: 'Du',          sponsorId: null,   level: heroLevel },
-    { id: 'cust1',    label: 'Kunde 1',     sponsorId: 'hero', level: navigatorLevel },
-    { id: 'cust2',    label: 'Kunde 2',     sponsorId: 'hero', level: navigatorLevel },
-    { id: 'cust3',    label: 'Kunde 3',     sponsorId: 'hero', level: navigatorLevel },
-    { id: 'cust4',    label: 'Kunde 4',     sponsorId: 'hero', level: navigatorLevel },
-    { id: 'cust5',    label: 'Kunde 5',     sponsorId: 'cust1', level: navigatorLevel },
-    { id: 'cust6',    label: 'Kunde 6',     sponsorId: 'hero', level: navigatorLevel },
-    { id: 'cust7',    label: 'Kunde 7',     sponsorId: 'hero', level: navigatorLevel },
-    { id: 'cust8',    label: 'Kunde 8',     sponsorId: 'cust5', level: navigatorLevel },
+    mk('hero',   null),
+    // Reihe 1
+    mk('cust1',  'hero'),
+    mk('cust2',  'hero'),
+    mk('cust3',  'hero'),
+    mk('cust4',  'hero'),
+    mk('cust6',  'hero'),    // = '5' im Display
+    mk('cust7',  'hero'),    // = '6' im Display
+    // Reihe 2
+    mk('cust5',  'cust1'),   // 1.1
+    mk('cust9',  'cust2'),   // 2.1
+    mk('cust10', 'cust3'),   // 3.1
+    mk('cust12', 'cust7'),   // 6.1
+    // Reihe 3
+    mk('cust8',  'cust5'),   // 1.1.1
+    mk('cust11', 'cust9'),   // 2.1.1
+    // Reihe 4
+    mk('cust13', 'cust8'),   // 1.1.1.1
   ]
 }
 
-/**
- * Die 8 Verkäufe in chronologischer Reihenfolge. Jeder Verkauf
- * spezifiziert wer empfohlen hat (directSeller), wer die Studie
- * macht (consultant), wer den Abschluss macht (expert) und wer das
- * Wasser ausgeteilt hat (station).
- *
- * Hero ist fertiger Expert → er bekommt sowohl consultant als auch
- * expert reward bei jedem Verkauf, an dem er beteiligt ist. Der
- * direkte Empfehler kann aber ein Kunde aus seiner Downline sein.
- */
-export function buildSales(heroes, market = 'de') {
-  void market
-  return [
-    {
-      n: 1, customerId: 'cust1',
-      directSellerId: 'hero',  consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Du empfiehlst direkt deinen ersten Kunden — du machst alles selbst.',
-    },
-    {
-      n: 2, customerId: 'cust2',
-      directSellerId: 'hero',  consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Zweiter Direktverkauf.',
-    },
-    {
-      n: 3, customerId: 'cust3',
-      directSellerId: 'hero',  consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Dritter Direktverkauf.',
-    },
-    {
-      n: 4, customerId: 'cust4',
-      directSellerId: 'hero',  consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Vierter Direktverkauf.',
-    },
-    {
-      n: 5, customerId: 'cust5',
-      // Kunde #1 empfiehlt; Hero macht Wasserstudie, Vortrag, Abschluss
-      directSellerId: 'cust1', consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Kunde 1 empfiehlt weiter — du übernimmst Wasserstudie, Vortrag und Abschluss. Differenzprovision für dich, Empfehler-Provision für Kunde 1.',
-    },
-    {
-      n: 6, customerId: 'cust6',
-      directSellerId: 'hero',  consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Sechster Direktverkauf — du erreichst die nächste Karrierestufe.',
-    },
-    {
-      n: 7, customerId: 'cust7',
-      directSellerId: 'hero',  consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Siebter Direktverkauf.',
-    },
-    {
-      n: 8, customerId: 'cust8',
-      // Kunde #5 empfiehlt; Hero macht alles
-      directSellerId: 'cust5', consultantId: 'hero', expertId: 'hero', stationId: 'hero',
-      narrative: 'Sub-Empfehlung: Kunde 5 (selbst über Kunde 1 in dein Team gekommen) empfiehlt seinen ersten Kunden weiter. Du verdienst zusätzlich an dieser zweiten Generation.',
-    },
-  ]
+export function heroLevelAtSale(heroLevelKey, saleN) {
+  const startLevel = LEVELS.find(l => l.key === heroLevelKey) || LEVELS[0]
+  return levelForPoints(startLevel.min + saleN)
 }
 
-void levelForPoints
+/**
+ * Die 13 Verkäufe in chronologischer Reihenfolge.
+ * Sales 1-8 wie zuvor (Hero direkt, dann Sub von Kunde 1, …).
+ * Sales 9-13 sind weitere Sub-Empfehlungen aus verschiedenen Zweigen.
+ */
+export function buildSales() {
+  const direct = (n, customerId, narrative) => ({
+    n, customerId,
+    directSellerId: 'hero', consultantId: 'hero', expertId: 'hero', stationId: 'hero',
+    narrative,
+  })
+  const subRecommendation = (n, customerId, fromId, narrative) => ({
+    n, customerId,
+    directSellerId: fromId, consultantId: 'hero', expertId: 'hero', stationId: 'hero',
+    narrative,
+  })
+  return [
+    direct(1, 'cust1', 'Du empfiehlst direkt deinen ersten Kunden — du machst alles selbst.'),
+    direct(2, 'cust2', 'Zweiter Direktverkauf.'),
+    direct(3, 'cust3', 'Dritter Direktverkauf.'),
+    direct(4, 'cust4', 'Vierter Direktverkauf.'),
+    subRecommendation(5, 'cust5', 'cust1',
+      'Kunde 1 empfiehlt weiter — du übernimmst Wasserstudie, Vortrag und Abschluss. Differenzprovision für dich, Empfehler-Provision für Kunde 1.'),
+    direct(6, 'cust6', 'Sechster Direktverkauf — du erreichst gleich die nächste Karrierestufe.'),
+    direct(7, 'cust7', 'Siebter Direktverkauf — Stufenwechsel: navigator → commander!'),
+    subRecommendation(8, 'cust8', 'cust5',
+      'Sub-Empfehlung: Kunde 1.1 (selbst über Kunde 1 in dein Team gekommen) empfiehlt seinen ersten Kunden weiter. Kunde 1 bekommt 0 € (gleiche Stufe), du verdienst die Differenzprovision.'),
+    subRecommendation(9, 'cust9', 'cust2',
+      'Kunde 2 empfiehlt weiter — neuer Sub-Zweig. Empfehler-Provision an Kunde 2, Differenzprovision an dich.'),
+    subRecommendation(10, 'cust10', 'cust3',
+      'Auch Kunde 3 zieht nach und empfiehlt seinen ersten Kunden.'),
+    subRecommendation(11, 'cust11', 'cust9',
+      'Kunde 2.1 empfiehlt selbst weiter — zweite Generation im 2-er Zweig. Kunde 2 bekommt 0 € (gleiche Stufe), du wieder die Differenzprovision.'),
+    subRecommendation(12, 'cust12', 'cust7',
+      'Kunde 6 empfiehlt weiter — der bisher inaktive Direktkunde wird zum Empfehler.'),
+    subRecommendation(13, 'cust13', 'cust8',
+      'Sub-Sub-Empfehlung: Kunde 1.1.1 empfiehlt seinen ersten Kunden. Drei Generationen Differenzprovision rollen jetzt durch — kein Empfehler dazwischen bekommt was, weil alle auf navigator-Stufe sind.'),
+  ]
+}

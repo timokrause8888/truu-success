@@ -61,23 +61,121 @@ body {
   margin: 2px 0 0; font-size: 15px; font-weight: 500;
   color: var(--ink-2); letter-spacing: 0.5px;
 }
-.hero-controls { display: flex; gap: 8px; }
-.lang-select {
-  padding: 8px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--ink);
-  font-family: inherit; font-size: 14px; font-weight: 500;
-  cursor: pointer;
+.hero-controls {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
 }
-.lang-select:focus {
-  outline: none; border-color: var(--gold-2);
-  box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
+/* Versions-Badge unter den Sprachflaggen — wie truu-save / truu-tasks */
+.version-badge {
+  font-size: 0.65rem; color: #b0b7c3;
+  font-weight: 400; letter-spacing: 0.5px;
+  text-align: right;
+}
+/* Flaggen-Reihe wie bei truu-save / truu-tasks */
+.language-switcher {
+  display: flex; gap: 5px; flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.language-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: #f0f2f5;
+  cursor: pointer;
+  font-size: 1.05rem;
+  padding: 0; transition: all 0.15s;
+}
+.language-btn:hover {
+  border-color: var(--gold-2);
+  background: var(--cream-3);
+}
+.language-btn.active {
+  border-color: var(--gold-2);
+  background: var(--cream-3);
+  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.25);
 }
 .hero-intro {
   margin: 16px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.55;
   max-width: 720px;
+}
+
+/* ─── Modus-Bar (Eigenumsatz / Teamaufbau) — eigene Zeile über der Setup-Bar */
+.mode-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.mode-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 18px 22px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.15s;
+  box-shadow: 0 2px 10px rgba(122, 88, 0, 0.06);
+}
+.mode-btn:hover:not(.active) {
+  border-color: var(--gold-2);
+  background: var(--cream);
+}
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--cream-3) 0%, #fff 100%);
+  border-color: var(--gold-2);
+  box-shadow: 0 4px 18px rgba(184, 134, 11, 0.18);
+}
+.mode-btn-icon {
+  font-size: 22px; line-height: 1;
+}
+.mode-btn-label {
+  font-size: 16px; font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.mode-btn.active .mode-btn-label {
+  color: var(--gold-3);
+}
+.mode-btn-sub {
+  font-size: 12px; color: var(--ink-3); font-weight: 500;
+}
+
+@media (max-width: 700px) {
+  .mode-bar { gap: 8px; }
+  .mode-btn { padding: 12px 14px; }
+  .mode-btn-icon { font-size: 18px; }
+  .mode-btn-label { font-size: 14px; }
+  .mode-btn-sub { font-size: 11px; }
+}
+
+/* Team-Aufbau Coming-Soon-Card */
+.team-coming-soon {
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px 20px;
+}
+.team-coming-card {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 36px;
+  text-align: center;
+  max-width: 520px;
+  box-shadow: var(--shadow);
+}
+.team-coming-icon {
+  font-size: 48px; margin-bottom: 14px; line-height: 1;
+}
+.team-coming-card h2 {
+  margin: 0 0 12px;
+  font-size: 22px; font-weight: 800;
+  color: var(--gold-3);
+}
+.team-coming-card p {
+  margin: 0 0 24px;
+  font-size: 15px; line-height: 1.6;
+  color: var(--ink-2);
 }
 
 /* ─── Setup-Bar (Markt + Karrierelevel) ─────────────────────────── */
@@ -103,6 +201,55 @@ body {
   background: #fff;
   font-family: inherit; font-size: 14px; font-weight: 500;
   min-width: 240px;
+}
+
+/* Trennstrich zwischen Setup-Gruppen */
+.setup-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* Stil-Picker — 4 Pills mit Mini-SVG-Vorschau */
+.style-picker {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.style-pills {
+  display: flex; gap: 4px;
+}
+.style-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px;
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink-2);
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.style-pill:hover { border-color: var(--gold-2); color: var(--gold-3); }
+.style-pill.active {
+  background: var(--cream-3); border-color: var(--gold-2);
+  color: var(--gold-3);
+  box-shadow: 0 1px 4px rgba(184, 134, 11, 0.2);
+}
+.style-pill-label { white-space: nowrap; }
+
+/* Live-Anzeige des AKTUELLEN Hero-Levels (steigt während Click-Through) */
+.level-now {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 6px 12px;
+  border-left: 3px solid var(--gold-2);
+  margin-left: 6px;
+}
+.level-now strong {
+  font-size: 14px; color: var(--gold-3);
+  font-weight: 800;
+}
+.level-now.changed strong { color: var(--green-2); }
+.level-now .level-up {
+  font-size: 11px; color: var(--green-2); font-weight: 700;
 }
 
 /* ─── Hauptbereich: 2-Spalten-Grid ──────────────────────────────── */
@@ -351,6 +498,108 @@ body {
   transition: all 0.15s;
 }
 .cta:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+.footer-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.cta-secondary {
+  background: #fff;
+  color: var(--gold-3);
+  border: 2px solid var(--gold-2);
+  box-shadow: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cta-secondary:hover {
+  background: var(--cream-3);
+  filter: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(184, 134, 11, 0.18);
+}
+
+/* ─── PDF-Viewer-Modal ─────────────────────────────────────────────
+   Vollbild-Modal mit der Original-Broschüre als PDF. Native Browser-
+   Anzeige via <iframe>. Plus Header mit Download- und Open-In-New-Tab-
+   Knöpfen, da iOS Safari iframes mit PDFs nicht zuverlässig rendert. */
+.pdf-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  display: flex; align-items: stretch; justify-content: center;
+  animation: pdfFadeIn 0.18s ease;
+  padding: 16px;
+}
+@keyframes pdfFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.pdf-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%; max-width: 1080px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+}
+.pdf-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 18px;
+  background: linear-gradient(135deg, var(--gold-2), var(--gold-3));
+  color: #fff; flex-wrap: wrap;
+}
+.pdf-modal-title {
+  font-size: 15px; font-weight: 700;
+}
+.pdf-modal-actions {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+}
+.pdf-btn {
+  padding: 7px 14px;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer; transition: all 0.15s;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+}
+.pdf-btn:hover {
+  background: rgba(255,255,255,0.25);
+  border-color: #fff;
+}
+.pdf-btn-primary {
+  background: #fff;
+  color: var(--gold-3);
+  border-color: #fff;
+}
+.pdf-btn-primary:hover {
+  background: var(--cream-3);
+  filter: brightness(1.02);
+}
+.pdf-btn-close {
+  font-size: 16px; padding: 5px 12px;
+}
+.pdf-modal-iframe {
+  flex: 1; min-height: 0;
+  width: 100%;
+  border: none;
+  background: #f5f5f5;
+}
+.pdf-modal-fallback {
+  padding: 8px 14px;
+  font-size: 12px; color: var(--ink-3);
+  background: var(--cream);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+.pdf-modal-fallback a { color: var(--gold-3); font-weight: 600; }
+
+@media (max-width: 700px) {
+  .pdf-modal-backdrop { padding: 0; }
+  .pdf-modal { border-radius: 0; }
+  .pdf-modal-title { font-size: 13px; }
+  .pdf-btn { font-size: 12px; padding: 6px 10px; }
+}
 
 /* ─── Mobile-Layout ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
